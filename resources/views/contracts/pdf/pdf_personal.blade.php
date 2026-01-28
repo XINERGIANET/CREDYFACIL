@@ -213,7 +213,7 @@
                 <tr>
                     <td style="border: 1px solid black; padding: 8px; text-align: center;">{{ $quota->number }}</td>
                     <td style="border: 1px solid black; padding: 8px; text-align: center;">
-                        {{ \Carbon\Carbon::parse($quota->payment_date)->format('d/m/Y') }}</td>
+                        {{ \Carbon\Carbon::parse($quota->date)->format('d/m/Y') }}</td>
                     <td style="border: 1px solid black; padding: 8px; text-align: center;">S/.
                         {{ number_format($quota->amount, 2) }}</td>
                 </tr>
