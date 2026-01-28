@@ -157,17 +157,17 @@ class ContractController extends Controller
 
         for ($i = 1; $i <= $quotas_rounded; $i++) {
             if ($type_quota === 1) {
-                // semanal
-                $quota_date = $date->addWeek();
+                // semanal (cada 7 días)
+                $quota_date = $date->copy()->addWeeks($i);
             } elseif ($type_quota === 2) {
-                // cada 2 semanas
-                $quota_date = $date->addWeeks(2);
+                // catorcenal (cada 14 días)
+                $quota_date = $date->copy()->addWeeks($i * 2);
             } elseif ($type_quota === 4) {
                 // mensual
-                $quota_date = $date->addMonth();
+                $quota_date = $date->copy()->addMonths($i);
             } else {
                 // fallback a semanal
-                $quota_date = $date->addWeek();
+                $quota_date = $date->copy()->addWeeks($i);
             }
 
             $quota_dates[] = [

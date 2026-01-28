@@ -237,7 +237,7 @@
         </tr>
         <tr>
             <td style="width: 35%; text-align: center; padding-top: 2px;">
-                <strong>EL CLIENTE</strong>
+                <strong>{{ $contract->name }}</strong>
             </td>
             <td style="width: 30%;">
                 &nbsp;
