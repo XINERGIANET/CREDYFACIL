@@ -1,13 +1,13 @@
 @extends('template.app')
 
-@section('title', 'Prestamos')
+@section('title', 'Administrativos')
 
 @section('content')
 <nav class="mb-2">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="{{ url('/') }}">Inicio</a></li>
     <li class="breadcrumb-item">Egresos</li>
-    <li class="breadcrumb-item active">Prestamos</li>
+    <li class="breadcrumb-item active">Administrativos</li>
   </ol>
 </nav>
 
@@ -19,7 +19,7 @@
 				<i class="ti ti-plus icon"></i> Crear nuevo
 			</button>
 			@endif
-			<a class="btn btn-success" href="{{ route('expenses.excel', request()->all()) }}" target="_blank">Excel</a>
+			<a class="btn btn-success" href="{{ route('expenses.excel_cash', request()->all()) }}" target="_blank">Excel</a>
 		</div>
 		<div class="text-center">
 			<span class="d-block small">
@@ -39,19 +39,6 @@
 						<input type="text" class="form-control" name="description" value="{{ request()->description }}">
 					</div>
 				</div>
-				@if(auth()->user()->hasRole('admin'))
-				<div class="col-md-3">
-					<div class="mb-3">
-						<label class="form-label">Asesor comercial</label>
-						<select class="form-select" name="seller_id">
-							<option value="">Seleccionar</option>
-							@foreach($sellers as $seller)
-							<option value="{{ $seller->id }}" @if($seller->id == request()->seller_id) selected @endif >{{ $seller->name }}</option>
-							@endforeach
-						</select>
-					</div>
-				</div>
-				@endif
 				<div class="col-md-3">
 					<div class="mb-3">
 						<label class="form-label">Método de pago</label>
@@ -77,7 +64,7 @@
 				</div>
 			</div>
 			<button class="btn btn-primary">Filtrar</button>
-			<a href="{{ route('expenses.index') }}" class="btn btn-danger">Limpiar</a>
+			<a href="{{ route('expenses.index_cash') }}" class="btn btn-danger">Limpiar</a>
 		</form>
 	</div>
 	<div class="table-responsive">
@@ -85,7 +72,6 @@
 			<thead>
 				<tr>
 					<th>Descripción</th>
-					<th>Asesor comercial</th>
 					<th>Cliente/Grupo</th>
 					<th>Monto</th>
 					<th>Método de pago</th>
@@ -98,7 +84,6 @@
 				@foreach($expenses as $expense)
 				<tr>
 					<td>{{ $expense->description }}</td>
-					<td>{{ optional($expense->seller)->name }}</td>
 					<td>{{ $expense->contract ? optional($expense->contract)->client() : 'Gastos generales' }}</td>
 					<td>S/{{ number_format($expense->expensePayments->sum('amount'), 2) }}</td>
 					<td>
@@ -154,33 +139,10 @@
   			</div>
   			<div class="modal-body">
   			  <div class="row">
-  			  	<div class="col-lg-6">
+  			  	<div class="col-lg-12">
   			  		<div class="mb-3">
   			  			<label class="form-label required">Descripción</label>
   			  			<input type="text" class="form-control" name="description" id="description" autocomplete="off">
-  			  		</div>
-  			  	</div>
-  			  	<div class="col-lg-6">
-  			  		<div class="mb-3">
-  			  			<label class="form-label">Asesor comercial</label>
-  			  			<select class="form-select" name="seller_id" id="seller_id" @if(auth()->user()->hasRole('seller')) readonly @endif>
-  			  				@if(auth()->user()->hasRole('admin'))
-  			  				<option value="">Seleccionar</option>
-  			  				@foreach($sellers as $seller)
-  			  				<option value="{{ $seller->id }}">{{ $seller->name }}</option>
-  			  				@endforeach
-  			  				@else
-  			  				<option value="{{ auth()->user()->id }}" selected>{{ auth()->user()->name }}</option>
-  			  				@endif
-  			  			</select>
-  			  		</div>
-  			  	</div>
-  			  	<div class="col-lg-12">
-  			  		<div class="mb-3">
-  			  			<label class="form-label">Cliente/Grupo</label>
-  			  			<select class="form-select ts-contracts" name="contract_id" id="contract_id">
-  			  				<option value="">Seleccionar</option>
-  			  			</select>
   			  		</div>
   			  	</div>
 		  		<!-- monto ya se gestiona en expense_payments -->
@@ -246,21 +208,10 @@
   			</div>
   			<div class="modal-body">
   			  <div class="row">
-  			  	<div class="col-lg-6">
+  			  	<div class="col-lg-12">
   			  		<div class="mb-3">
   			  			<label class="form-label required">Descripción</label>
   			  			<input type="text" class="form-control" name="description" id="editDescription" autocomplete="off">
-  			  		</div>
-  			  	</div>
-  			  	<div class="col-lg-6">
-  			  		<div class="mb-3">
-  			  			<label class="form-label">Asesor comercial</label>
-  			  			<select class="form-select" name="seller_id" id="editSellerId">
-  			  				<option value="">Seleccionar</option>
-  			  				@foreach($sellers as $seller)
-  			  				<option value="{{ $seller->id }}">{{ $seller->name }}</option>
-  			  				@endforeach
-  			  			</select>
   			  		</div>
   			  	</div>
 		  		<!-- monto trasladado a expense_payments (por método) -->
@@ -320,42 +271,6 @@
 @section('scripts')
 <script>
 
-	$(document).ready(function(){
-
-		new TomSelect('.ts-contracts', {
-			valueField: 'id',
-			labelField: ['name', 'group_name'],
-			searchField: ['name', 'group_name'],
-			copyClassesToDropdown: false,
-			dropdownClass: 'dropdown-menu ts-dropdown',
-			optionClass:'dropdown-item',
-			load: function(query, callback){
-				$.ajax({
-					url: '{{ route("contracts.api") }}?q=' + encodeURIComponent(query),
-					method: 'GET',
-					success: function(data){
-						callback(data.items);
-					},
-					error: function(err){
-						console.log(err);
-					}
-				})
-			},
-			render: {
-				item: function(data, escape) {
-					return `<div>${ data.client_type == 'Personal' ? escape(data.name) : escape(data.group_name) } - S/${escape(data.requested_amount)}</div>`;
-				},
-				option: function(data, escape) {
-					return `<div>${ data.client_type == 'Personal' ? escape(data.name) : escape(data.group_name) } - S/${escape(data.requested_amount)}</div>`;
-				},
-				no_results: function(data, escape){
-					return '<div class="no-results">No se encontraron resultados</div>'
-				}
-			},
-		});
-
-	});
-
 	// Mostrar segundo método en creación
 	$('#addPaymentBtn').on('click', function(){
 		$('#payment_method_block_2').removeClass('d-none');
@@ -390,9 +305,7 @@
 		var fd = new FormData();
 
 		fd.append('description', $('#description').val());
-		fd.append('seller_id', $('#seller_id').val());
-		fd.append('contract_id', $('#contract_id').val());
-	fd.append('payment_method_id', $('#payment_method_id').val());
+		fd.append('payment_method_id', $('#payment_method_id').val());
 		fd.append('payment_amount', $('#payment_amount').val());
 		fd.append('date', $('#date').val());
 		fd.append('image', $('#image')[0].files[0]);
@@ -437,8 +350,6 @@
 			method: 'GET',
 			success: function(data){
 				$('#editDescription').val(data.description);
-				$('#editSellerId').val(data.seller_id);
-				// total mostrado, no hay input global editAmount
 				$('#editPaymentMethodId').val(data.payment_method_id);
 				$('#editPaymentAmount').val(data.payment_amount);
 				if (data.payment_method_id_2) {
@@ -469,9 +380,8 @@
 		var fd = new FormData();
 
 		fd.append('description', $('#editDescription').val());
-		fd.append('seller_id', $('#editSellerId').val());
-	fd.append('payment_method_id', $('#editPaymentMethodId').val());
-	fd.append('payment_amount', $('#editPaymentAmount').val());
+		fd.append('payment_method_id', $('#editPaymentMethodId').val());
+		fd.append('payment_amount', $('#editPaymentAmount').val());
 		fd.append('date', $('#editDate').val());
 		fd.append('image', $('#editImage')[0].files[0]);
 		// segundo método en edición
@@ -479,7 +389,6 @@
 			fd.append('payment_method_id_2', $('#editPaymentMethodId2').val());
 			fd.append('payment_amount_2', $('#editPaymentAmount2').val());
 		}
-		fd.append('image', $('#editImage')[0].files[0]);
 		fd.append('_method', 'patch');
 
 		$.ajax({

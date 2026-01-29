@@ -13,6 +13,7 @@ class Expense extends Model
         'description',
         'seller_id',
         'contract_id',
+        'payment_method_id',
         'date',
         'image',
         'deleted'

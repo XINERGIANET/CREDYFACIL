@@ -142,16 +142,48 @@
                             </div>
                         </li>
                         @if (!auth()->user()->hasRole('payments'))
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('expenses.index') }}">
-                                <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                    <i class="ti ti-cash icon"></i>
-                                </span>
-                                <span class="nav-link-title">
-                                    Egresos
-                                </span>
-                            </a>
-                        </li>
+                            @if (auth()->user()->hasRole('operations'))
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('expenses.index') }}">
+                                        <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                            <i class="ti ti-cash icon"></i>
+                                        </span>
+                                        <span class="nav-link-title">
+                                            Prestamos
+                                        </span>
+                                    </a>
+                                </li>
+                            @else
+                                @if (!auth()->user()->hasRole('seller'))
+                                    <li class="nav-item dropdown">
+                                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown"
+                                            data-bs-auto-close="false" role="button" aria-expanded="true">
+                                            <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                                <i class="ti ti-cash icon"></i>
+                                            </span>
+                                            <span class="nav-link-title">
+                                                Egresos
+                                            </span>
+                                        </a>
+                                        <div class="dropdown-menu">
+                                            <div class="dropdown-menu-columns">
+                                                <div class="dropdown-menu-column">
+                                                    <a class="dropdown-item" href="{{ route('expenses.index') }}">
+                                                        Prestamos
+                                                    </a>
+                                                </div>
+                                                @if (auth()->user()->hasRole('admin'))
+                                                    <div class="dropdown-menu-column">
+                                                        <a class="dropdown-item" href="{{ route('expenses.index_cash') }}">
+                                                            Administrativos 
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </li>
+                                @endif
+                            @endif
                         @if (auth()->user()->hasRole('admin'))
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ route('transfers.index') }}">
