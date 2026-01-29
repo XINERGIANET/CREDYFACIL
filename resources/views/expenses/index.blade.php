@@ -157,7 +157,7 @@
   			  	<div class="col-lg-6">
   			  		<div class="mb-3">
   			  			<label class="form-label required">Descripción</label>
-  			  			<input type="text" class="form-control" name="description" id="description" autocomplete="off">
+  			  			<input type="text" class="form-control"  value="Desembolso" name="description" id="description" autocomplete="off">
   			  		</div>
   			  	</div>
   			  	<div class="col-lg-6">
