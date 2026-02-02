@@ -378,8 +378,8 @@
                             </div>
                             <div class="col-lg-2">
                                 <div class="mb-3">
-                                    <label class="form-label required">Número de meses</label>
-                                    <input type="number" class="form-control" name="months_number" id="months_number" autocomplete="off" step="0.1" min="0">
+                                    <label class="form-label required">Número de cuotas</label>
+                                    <input type="number" class="form-control" name="months_number" id="months_number" autocomplete="off" min="0">
                                 </div>
                             </div>
                             <div class="col-lg-2">
