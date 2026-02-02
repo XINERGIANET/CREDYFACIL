@@ -97,10 +97,9 @@
 				</h5>
 				<ul>
 					<li class="fs-3 fw-semibold">Efectivo: S/{{ number_format($sales_1, 2) }}</li>
-					<li class="fs-3 fw-semibold">Banco de la Nación: S/{{ number_format($sales_2, 2) }}</li>
-					<li class="fs-3 fw-semibold">Caja Piura: S/{{ number_format($sales_3, 2) }}</li>
-					<li class="fs-3 fw-semibold">BCP: S/{{ number_format($sales_4, 2) }}</li>
-					<li class="fs-3 fw-semibold">BBVA: S/{{ number_format($sales_5, 2) }}</li>
+					<li class="fs-3 fw-semibold">BCP: S/{{ number_format($sales_2, 2) }}</li>
+					<li class="fs-3 fw-semibold">Yape: S/{{ number_format($sales_3, 2) }}</li>
+					
 				</ul>
 			</div>
 		</div>

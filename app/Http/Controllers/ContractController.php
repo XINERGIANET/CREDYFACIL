@@ -130,26 +130,27 @@ class ContractController extends Controller
 
         $type_quota = (int) $request->type_quota;
 
-        // Mapeo: según lo solicitado
-        // 1 => semanal (4 cuotas por mes)
-        // 2 => cada 2 semanas (2 cuotas por mes)
-        // 4 => mensual (1 cuota por mes)
-        $perMonthMap = [
-            1 => 4,
-            2 => 2,
-            4 => 1,
-        ];
-
-        $quotasPerMonth = isset($perMonthMap[$type_quota]) ? $perMonthMap[$type_quota] : 4;
-        $quotas = $request->months_number * $quotasPerMonth;
+        // months_number ahora es directamente el número de cuotas
+        $quotas = $request->months_number;
         // Redondear hacia arriba el número de cuotas para el loop
         $quotas_rounded = ceil($quotas);
         $percentage = $interest_percentage;
 
         $interest = $request->requested_amount * ($interest_percentage / 100);
         $payable_amount = $request->requested_amount + $interest + $insurance_cost;
-        $quota = $payable_amount / $quotas;
-        $quota = ceil($quota * 10) / 10;
+        
+        // Calcular el monto base de cada cuota
+        $quota_base = $payable_amount / $quotas;
+        // Redondear hacia arriba a 1 decimal para las primeras cuotas
+        $quota = ceil($quota_base * 10) / 10;
+        
+        // Calcular cuánto se pagaría con (n-1) cuotas redondeadas
+        $total_first_quotas = $quota * ($quotas_rounded - 1);
+        
+        // La última cuota es la diferencia exacta para que la suma total sea igual a payable_amount
+        $last_quota = $payable_amount - $total_first_quotas;
+        // Redondear a 1 decimal (sin forzar hacia arriba) para mantener la suma exacta
+        $last_quota = round($last_quota * 10) / 10;
 
         $date = Carbon::parse($request->date);
 
@@ -170,9 +171,13 @@ class ContractController extends Controller
                 $quota_date = $date->copy()->addWeeks($i);
             }
 
+            // Usar el monto ajustado para la última cuota
+            $quota_amount = ($i == $quotas_rounded) ? $last_quota : $quota;
+
             $quota_dates[] = [
                 'number' => $i,
-                'date' => $quota_date->format('Y-m-d')
+                'date' => $quota_date->format('Y-m-d'),
+                'amount' => $quota_amount
             ];
         }
 
@@ -253,12 +258,13 @@ class ContractController extends Controller
             $config->update(['number_pagare' => $nextPagare]);
 
             foreach ($quota_dates as $quota_date) {
+                $quota_amount = $quota_date['amount'] ?? $quota;
 
                 Quota::create([
                     'contract_id' => $contract->id,
                     'number' => $quota_date['number'],
-                    'amount' => $quota,
-                    'debt' => $quota,
+                    'amount' => $quota_amount,
+                    'debt' => $quota_amount,
                     'date' => $quota_date['date'],
                 ]);
             }
@@ -452,8 +458,8 @@ class ContractController extends Controller
         $options->set('isRemoteEnabled', true);
         $options->set('chroot', base_path());
 
-        // Cargar relaciones de ubicación
-        $contract->load('district.province.department');
+        // Cargar relaciones de ubicación y cuotas
+        $contract->load('district.province.department', 'quotas');
 
         //Cantidad de soles en letras
         $contract->amount_in_words = $this->convertToWords($contract->requested_amount);
@@ -464,20 +470,21 @@ class ContractController extends Controller
         $contract->department = $contract->district && $contract->district->department ? $contract->district->department->name : '';
 
         // Tipo de cuota (Semanal, Catorcenal, Mensual)
-        if (!empty($contract->months_number) && !empty($contract->quotas_number)) {
-            $months = (float) $contract->months_number;
-            $quotasPerMonth = (float) $contract->quotas_number / ($months ?: 1);
-            $roundedQuotas = (int) round($quotasPerMonth);
-
-            $typeMap = [
-                1 => 'Mensual',
-                2 => 'Catorcenal',
-                4 => 'Semanal',
-            ];
-
-            $contract->quota_type = $typeMap[$roundedQuotas] ?? 'No definido';
-        } else {
-            $contract->quota_type = 'No definido';
+        // months_number ahora es directamente el número de cuotas
+        // El tipo de cuota se determina por el intervalo entre fechas
+        $contract->quota_type = 'No definido';
+        if ($contract->quotas && $contract->quotas->count() > 1) {
+            $firstDate = Carbon::parse($contract->quotas->first()->date);
+            $secondDate = Carbon::parse($contract->quotas->skip(1)->first()->date);
+            $daysDiff = $firstDate->diffInDays($secondDate);
+            
+            if ($daysDiff >= 25 && $daysDiff <= 35) {
+                $contract->quota_type = 'Mensual';
+            } elseif ($daysDiff >= 12 && $daysDiff <= 16) {
+                $contract->quota_type = 'Catorcenal';
+            } elseif ($daysDiff >= 5 && $daysDiff <= 9) {
+                $contract->quota_type = 'Semanal';
+            }
         }
 
         // Calcular días totales del préstamo
@@ -506,6 +513,9 @@ class ContractController extends Controller
     }
     public function pdf(Request $request, Contract $contract)
     {
+        // Cargar cuotas para determinar el tipo de cuota
+        $contract->load('quotas');
+        
         $fpdf = new PdfModel('P');
 
         $fpdf->AddPage();
@@ -531,20 +541,25 @@ class ContractController extends Controller
         $quotaFrequencyText = 'cuotas';
         $quotaTypeName = null;
 
-        if (!empty($contract->months_number) && !empty($contract->quotas_number)) {
-            $months = (float) $contract->months_number;
-            $quotasPerMonth = (float) $contract->quotas_number / ($months ?: 1);
-            $roundedQuotas = (int) round($quotasPerMonth);
-
-            $typeMap = [
-                1 => ['label' => 'Mensual', 'frequency' => 'cuotas mensuales'],
-                2 => ['label' => 'Catorcenal', 'frequency' => 'cuotas catorcenales'],
-                4 => ['label' => 'Semanal', 'frequency' => 'cuotas semanales'],
-            ];
-
-            if (isset($typeMap[$roundedQuotas])) {
-                $quotaTypeName = $typeMap[$roundedQuotas]['label'];
-                $quotaFrequencyText = $typeMap[$roundedQuotas]['frequency'];
+        // months_number ahora es directamente el número de cuotas
+        // El tipo de cuota se determina por el intervalo entre fechas
+        $quotaTypeName = null;
+        $quotaFrequencyText = 'cuotas';
+        
+        if ($contract->quotas && $contract->quotas->count() > 1) {
+            $firstDate = Carbon::parse($contract->quotas->first()->date);
+            $secondDate = Carbon::parse($contract->quotas->skip(1)->first()->date);
+            $daysDiff = $firstDate->diffInDays($secondDate);
+            
+            if ($daysDiff >= 25 && $daysDiff <= 35) {
+                $quotaTypeName = 'Mensual';
+                $quotaFrequencyText = 'cuotas mensuales';
+            } elseif ($daysDiff >= 12 && $daysDiff <= 16) {
+                $quotaTypeName = 'Catorcenal';
+                $quotaFrequencyText = 'cuotas catorcenales';
+            } elseif ($daysDiff >= 5 && $daysDiff <= 9) {
+                $quotaTypeName = 'Semanal';
+                $quotaFrequencyText = 'cuotas semanales';
             }
         }
 

@@ -378,7 +378,7 @@
                             </div>
                             <div class="col-lg-2">
                                 <div class="mb-3">
-                                    <label class="form-label required">Número de meses</label>
+                                    <label class="form-label required">Número de cuotas</label>
                                     <input 
                                         type="number"
                                         class="form-control"
