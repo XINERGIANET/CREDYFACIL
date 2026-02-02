@@ -138,7 +138,7 @@
     <div class="modal modal-blur fade" id="createModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
             <div class="modal-content">
-                <form id="storeForm" method="POST">
+                <form novalidate id="storeForm" method="POST">
                     <div class="modal-header">
                         <h5 class="modal-title">Crear nuevo</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -379,7 +379,15 @@
                             <div class="col-lg-2">
                                 <div class="mb-3">
                                     <label class="form-label required">Número de meses</label>
-                                    <input type="number" class="form-control" name="months_number" id="months_number" autocomplete="off" step="0.1" min="0">
+                                    <input 
+                                        type="number"
+                                        class="form-control"
+                                        name="months_number"
+                                        id="months_number"
+                                        autocomplete="off"
+                                        step="any"
+                                        min="0"
+                                    >
                                 </div>
                             </div>
                             <div class="col-lg-2">
