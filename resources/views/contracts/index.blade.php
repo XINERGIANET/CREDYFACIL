@@ -883,8 +883,20 @@
             if(totalDebt > 0) {
                 
                 var base_insurance = parseFloat(String($('#insurance_cost').val()).replace(',', '.')) || 0;
-                var months_number = parseFloat(String($('#months_number').val()).replace(',', '.')) || 0;
-                var insurance_cost = Math.round(base_insurance * months_number * 100) / 100;
+                var quotas = parseFloat(String($('#months_number').val()).replace(',', '.')) || 0;
+                var type_quota = parseInt($('select[name="type_quota"]').val()) || 1;
+                
+                // Calcular el número de meses según el tipo de cuota
+                // 1 => semanal (4 cuotas/mes), 2 => catorcenal (2 cuotas/mes), 4 => mensual (1 cuota/mes)
+                var quotasPerMonthMap = {
+                    1: 4,  // semanal: 4 cuotas por mes
+                    2: 2,  // catorcenal: 2 cuotas por mes
+                    4: 1   // mensual: 1 cuota por mes
+                };
+                var quotasPerMonth = quotasPerMonthMap[type_quota] || 4;
+                var months = quotas / quotasPerMonth;
+                
+                var insurance_cost = Math.round(base_insurance * months * 100) / 100;
                 var interest_percentage = parseFloat(String($('#interest').val()).replace(',', '.')) || 0;
                 var requested_amount = parseFloat(String($('#requested_amount').val()).replace(',', '.')) || 0;
 
