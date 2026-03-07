@@ -228,11 +228,12 @@ class ContractController extends Controller
                 $contract->civil_status = $request->civil_status;
 
                 //derivar cuotas anteriores - TODO: preguntar como sería para préstamos grupales
-                Quota::where('paid', 0)
-                    ->whereHas('contract', function ($q) use ($document) {
-                        $q->where('document', $document);
-                    })
-                    ->update(['paid' => 2]);
+                // Quota::where('paid', 0)
+                //     ->whereHas('contract', function ($q) use ($document) {
+                //         $q->where('document', $document);
+                //     })
+                //     ->update(['paid' => 2]);
+
             } elseif ($request->client_type == 'Grupo') {
 
                 $people = [];
