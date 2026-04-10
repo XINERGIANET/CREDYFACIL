@@ -15,6 +15,15 @@ $app = new Illuminate\Foundation\Application(
     $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
 );
 
+// Use /public when it exists, otherwise fall back to project root (legacy deploys).
+$publicPath = $app->basePath('public');
+if (!is_dir($publicPath)) {
+    $publicPath = $app->basePath();
+}
+$app->bind('path.public', function () use ($publicPath) {
+    return $publicPath;
+});
+
 /*
 |--------------------------------------------------------------------------
 | Bind Important Interfaces

@@ -55,7 +55,7 @@
         modificado de manera
         unilateral por CREDYFACIL SOLUCIONES S.A.C, salvo que implique condiciones más favorables para EL MUTUATARIO/
         CLIENTE; Por tanto, EL MUTUATARIO/ CLIENTE devolverá la suma de S/
-        {{ number_format($contract->payable_amount, 2) }} como
+        {{ number_format($contract->payable_amount, 2) }} (incluye seguro por S/ {{ number_format($contract->insurance_amount ?? 0, 2) }}) como
         consecuencia del cumplimiento de la obligación pactada; Asimismo, se obliga a cumplir con el pago en las
         oportunidades que se indican en el calendarios de pagos, indicado en el anexo 1-B del presente contrato.
     </p>
@@ -79,8 +79,8 @@
         pago del íntegro
         de la suma de dinero mutuada, más los intereses que se generes, quedando facultado para efectuar acciones pre
         judiciales y judiciales de cobranza para la recuperación del crédito.</p>
-    <p><strong>SEPTIMA.- EL MUTUATARIO/ CLIENTE</strong> autoriza el pago de S/ 6.00 (seis con 00/100 soles) adicional,
-        al integro de la obligación descrita en la clausula Cuarta, por concepto de gastos operativos.</p>
+    <p><strong>SEPTIMA.- EL MUTUATARIO/ CLIENTE</strong> autoriza el pago de S/ {{ number_format($contract->insurance_amount ?? 0, 2) }} adicional,
+        al integro de la obligación descrita en la clausula Cuarta, por concepto de seguro.</p>
     <p>OCTAVA.- En respaldo de la obligación asumida, frente a <strong>CREDYFACIL SOLUCIONES S.A.C</strong>, EL <strong>
             MUTUATARIO/ CLIENTE</strong>,
         suscribe un pagare N° {{ str_pad($contract->number_pagare == null ? '______' : $contract->number_pagare, 6, '0', STR_PAD_LEFT) }} emitido en forma incompleta. Los importes que no sean pagados por EL
@@ -195,6 +195,12 @@
             <td style="padding: 5px;">
                 <strong>Periodicidad:</strong> {{ strtoupper($contract->quota_type) }}
             </td>
+        </tr>
+        <tr>
+            <td style="padding: 5px;">
+                <strong>Monto seguro:</strong> S/. {{ number_format($contract->insurance_amount ?? 0, 2) }}
+            </td>
+            <td colspan="2" style="padding: 5px;"></td>
         </tr>
     </table>
     <h4 style="text-align: center; margin-top: 20px; margin-bottom: 10px;">CRONOGRAMA</h4>
