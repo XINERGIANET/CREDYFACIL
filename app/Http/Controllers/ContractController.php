@@ -36,9 +36,8 @@ class ContractController extends Controller
             return $query->whereDate('date', '<=', $end_date);
         })->latest('date')->latest('id')->paginate(20);
         $sellers = User::seller()->where('state', 0)->active()->orderBy('name', 'asc')->get();
-        $insurance_amount = Config::first()->insurance;
         $departments = Department::orderBy('name', 'asc')->get();
-        return view('contracts.index', compact('contracts', 'sellers', 'insurance_amount', 'departments'));
+        return view('contracts.index', compact('contracts', 'sellers', 'departments'));
     }
 
     public function ending(Request $request)
@@ -101,7 +100,7 @@ class ContractController extends Controller
             'date' => 'required|date',
             'interest' => 'nullable|numeric',
             'type_quota' => 'required|in:1,2,4',
-            'insurance_cost' => 'nullable|numeric',
+            'insurance_cost' => 'required|numeric|min:0',
         ]);
 
         $validator->sometimes(['document', 'name', 'phone', 'address', 'home_type', 'civil_status'], 'required', function ($request) {
@@ -125,8 +124,7 @@ class ContractController extends Controller
 
         $interest_percentage = floatval($request->interest);
 
-        $insurance_cost = floatval($request->insurance_cost) * $request->months_number;
-        $insurance_cost = ceil($insurance_cost * 10) / 10;
+        $insurance_cost = round(floatval($request->insurance_cost), 2);
 
         $type_quota = (int) $request->type_quota;
 

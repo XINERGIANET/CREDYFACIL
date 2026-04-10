@@ -1,4 +1,4 @@
-@extends('template.app')
+﻿@extends('template.app')
 
 @section('title', 'Contratos')
 
@@ -16,14 +16,6 @@
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
                     <i class="ti ti-plus icon"></i> Crear nuevo
                 </button>
-                <div class="d-flex align-items-center ms-auto gap-4">
-                    <p class="mb-0 text-end">
-                        El monto de seguro actualmente es: <b>S/{{ $insurance_amount }}</b>
-                    </p>
-                    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#insuranceModal">
-                        <i class="ti ti-pencil icon"></i> Cambiar monto
-                    </button>
-                </div>
             @endif
         </div>
         @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
@@ -76,7 +68,7 @@
                         <th>Asesor C.</th>
                         <th>Monto solicitado</th>
                         <th>Cuotas</th>
-                        <th>Interés</th>
+                        <th>interés</th>
                         <th>Monto a pagar</th>
                         <th>Fecha de prestamo</th>
                         <th></th>
@@ -145,8 +137,6 @@
                     </div>
                     <div class="modal-body">
                         <div class="row">
-                            <input type="hidden" name="insurance_cost" id="insurance_cost"
-                                value="{{ $insurance_amount }}">
                             <div class="col-lg-4">
                                 <div class="mb-3">
                                     <label class="form-label required">Tipo de cliente</label>
@@ -260,7 +250,7 @@
                             </div>
                             <div class="col-lg-4" id="divBusinessAddress">
                                 <div class="mb-3">
-                                    <label class="form-label">Dirección de negocio</label>
+                                    <label class="form-label">DirecciÃ³n de negocio</label>
                                     <input type="text" class="form-control" name="business_address"
                                         id="business_address" autocomplete="off">
                                 </div>
@@ -307,8 +297,7 @@
                                         <div class="input-group">
                                             <input type="text" class="form-control ts-document" name="documents[]"
                                                 autocomplete="off">
-                                            <button type="button" class="btn btn-primary btn-icon"
-                                                id="btn-group-search">
+                                            <button type="button" class="btn btn-primary btn-icon btn-group-search">
                                                 <i class="ti ti-search icon"></i>
                                             </button>
                                         </div>
@@ -322,7 +311,7 @@
                                 </div>
                                 <div class="col-lg-4">
                                     <div class="mb-3">
-                                        <label class="form-label required">Dirección</label>
+                                        <label class="form-label required">DirecciÃ³n</label>
                                         <input type="text" class="form-control" name="addresses[]"
                                             autocomplete="off">
                                     </div>
@@ -335,8 +324,7 @@
                                         <div class="input-group">
                                             <input type="text" class="form-control ts-document" name="documents[]"
                                                 autocomplete="off">
-                                            <button type="button" class="btn btn-primary btn-icon"
-                                                id="btn-group-search">
+                                            <button type="button" class="btn btn-primary btn-icon btn-group-search">
                                                 <i class="ti ti-search icon"></i>
                                             </button>
                                         </div>
@@ -350,7 +338,7 @@
                                 </div>
                                 <div class="col-lg-4">
                                     <div class="mb-3">
-                                        <label class="form-label required">Dirección</label>
+                                        <label class="form-label required">DirecciÃ³n</label>
                                         <input type="text" class="form-control" name="addresses[]"
                                             autocomplete="off">
                                     </div>
@@ -406,7 +394,7 @@
                                     @if (auth()->user()->hasRole('operations'))
                                         <input type="date" class="form-control" name="date_disabled"
                                             value="{{ now()->format('Y-m-d') }}" autocomplete="off" disabled>
-                                        {{-- input hidden para asegurar que la fecha se envíe en el formulario aun cuando el campo esté disabled --}}
+                                        {{-- input hidden para asegurar que la fecha se envÃ­e en el formulario aun cuando el campo estÃ© disabled --}}
                                         <input type="hidden" name="date" value="{{ now()->format('Y-m-d') }}">
                                     @else
                                         <input type="date" class="form-control" name="date"
@@ -418,6 +406,13 @@
                                 <div class="mb-3">
                                     <label class="form-label required">Tasa de interés (%)</label>
                                     <input type="text" class="form-control" name="interest" id="interest"
+                                        autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="mb-3">
+                                    <label class="form-label required">Monto seguro</label>
+                                    <input type="text" class="form-control" name="insurance_cost" id="insurance_cost"
                                         autocomplete="off">
                                 </div>
                             </div>
@@ -500,7 +495,7 @@
                 <div class="modal-body">
                     <p>El cliente tiene una deuda pendiente de: S/<b id="past-debt"></b></p>
                     <p>El nuevo contrato cuenta con una deuda total de : S/<b id="contract-debt"></b></p>
-                    <p>El monto entregado deberá ser de : S/<b id="difference"></b></p>
+                    <p>El monto entregado deberÃ¡ ser de : S/<b id="difference"></b></p>
                     <p class="text-danger" id="warning"></p>
                 </div>
                 <div class="modal-footer">
@@ -509,37 +504,6 @@
                         Cerrar</button>
                     <button type="button" class="btn btn-primary" id="btn-confirm">Aceptar</button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal modal-blur fade" id="insuranceModal" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <form id="insuranceForm" method="POST">
-                    @csrf
-                    <div class="modal-header">
-                        <h5 class="modal-title">Editar monto de seguro</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-lg-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Monto</label>
-                                    <input type="text" class="form-control" name="insurance_amount"
-                                        id="insurance_amount" autocomplete="off">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn me-auto" data-bs-dismiss="modal"><i class="ti ti-x icon"></i>
-                            Cerrar</button>
-                        <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy icon"></i>
-                            Guardar</button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
@@ -709,16 +673,22 @@
                 $input.data('ts-initialized', true);
             }
 
-            // inicializar TomSelect en los inputs existentes
-            $('.ts-document').each(function() {
+            // Inicializar TomSelect en los inputs existentes de DNI (principal y grupo).
+            $('.ts-document, #divGroup input[name="documents[]"]').each(function() {
+                initTomSelect($(this));
+            });
+            // Exponer helper para filas agregadas dinÃ¡micamente.
+            window.initContractDocumentSelect = initTomSelect;
+            // Fallback: si alguna fila se agrega sin clase ts-document, se inicializa al enfocar.
+            $(document).on('focus', '#divGroup input[name="documents[]"]', function() {
                 initTomSelect($(this));
             });
 
-            // Validación del campo meses según tipo de cuota
+            // ValidaciÃ³n del campo meses segÃºn tipo de cuota
             var $months = $('input[name="months_number"]');
             var $typeQuota = $('select[name="type_quota"]');
 
-            // Cambiar atributo step según tipo de cuota
+            // Cambiar atributo step segÃºn tipo de cuota
             $typeQuota.on('change', function() {
                 if ($(this).val() === '4') {
                     $months.attr('step', '1');
@@ -767,13 +737,13 @@
                 },
                 error: function() {
                     ToastError.fire({
-                        text: 'Ocurrió un error'
+                        text: 'OcurriÃ³ un error'
                     });
                 }
             })
         });
 
-        $(document).on('click', '#btn-group-search', function() {
+        $(document).on('click', '.btn-group-search, #btn-group-search', function() {
             var $row = $(this).closest('.row');
             var $dniInput = $row.find('input[name="documents[]"]');
             var $nameInput = $row.find('input[name="names[]"]');
@@ -805,7 +775,7 @@
                 },
                 error: function() {
                     ToastError.fire({
-                        text: 'Ocurrió un error'
+                        text: 'OcurriÃ³ un error'
                     });
                 }
             });
@@ -838,7 +808,7 @@
                 },
                 error: function() {
                     ToastError.fire({
-                        text: 'Ocurrió un error al cargar las provincias'
+                        text: 'OcurriÃ³ un error al cargar las provincias'
                     });
                 }
             });
@@ -868,7 +838,7 @@
                 },
                 error: function() {
                     ToastError.fire({
-                        text: 'Ocurrió un error al cargar los distritos'
+                        text: 'OcurriÃ³ un error al cargar los distritos'
                     });
                 }
             });
@@ -882,9 +852,8 @@
 
             if(totalDebt > 0) {
                 
-                var base_insurance = parseFloat(String($('#insurance_cost').val()).replace(',', '.')) || 0;
-                var months_number = parseFloat(String($('#months_number').val()).replace(',', '.')) || 0;
-                var insurance_cost = Math.round(base_insurance * months_number * 100) / 100;
+                var insurance_cost = parseFloat(String($('#insurance_cost').val()).replace(',', '.')) || 0;
+                insurance_cost = Math.round(insurance_cost * 100) / 100;
                 var interest_percentage = parseFloat(String($('#interest').val()).replace(',', '.')) || 0;
                 var requested_amount = parseFloat(String($('#requested_amount').val()).replace(',', '.')) || 0;
 
@@ -926,14 +895,14 @@
 
                     } else {
                         ToastError.fire({
-                            text: data.error ? data.error : 'Ocurrió un error'
+                            text: data.error ? data.error : 'OcurriÃ³ un error'
                         });
                         $('#btn-save').prop('disabled', false);
                     }
                 },
                 error: function(err) {
                     ToastError.fire({
-                        text: 'Ocurrió un error'
+                        text: 'OcurriÃ³ un error'
                     });
                     $('#btn-save').prop('disabled', false);
                 }
@@ -964,7 +933,7 @@
                 },
                 error: function(err) {
                     ToastError.fire({
-                        text: 'Ocurrió un error'
+                        text: 'OcurriÃ³ un error'
                     });
                 }
             });
@@ -992,13 +961,13 @@
 
                     } else {
                         ToastError.fire({
-                            text: data.error ? data.error : 'Ocurrió un error'
+                            text: data.error ? data.error : 'OcurriÃ³ un error'
                         });
                     }
                 },
                 error: function(err) {
                     ToastError.fire({
-                        text: 'Ocurrió un error'
+                        text: 'OcurriÃ³ un error'
                     });
                 }
             });
@@ -1010,7 +979,7 @@
             var id = $(this).data('id');
 
             ToastConfirm.fire({
-                text: '¿Estás seguro que deseas borrar el registro?',
+                text: 'Â¿EstÃ¡s seguro que deseas borrar el registro?',
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
@@ -1024,7 +993,7 @@
                         },
                         error: function(err) {
                             ToastError.fire({
-                                text: 'Ocurrió un error'
+                                text: 'OcurriÃ³ un error'
                             });
                         }
                     });
@@ -1096,81 +1065,41 @@
         });
 
         $('#btn-add').click(function() {
-            var html = `
-			<div class="row">
-				<div class="col-lg-4">
-					<div class="mb-3">
-						<label class="form-label required">DNI</label>
-						<div class="input-group">
-							<input type="text" class="form-control" name="documents[]" autocomplete="off">
-							<button type="button" class="btn btn-primary btn-icon" id="btn-group-search">
-								<i class="ti ti-search icon"></i>
-							</button>
-						</div>
-					</div>
-				</div>
-				<div class="col-lg-4">
-					<div class="mb-3">
-						<label class="form-label required">Nombre</label>
-						<input type="text" class="form-control" name="names[]" autocomplete="off">
-					</div>
-				</div>
-				<div class="col-lg-4">
-					<div class="mb-3">
-						<label class="form-label required">Dirección</label>
-						<input type="text" class="form-control" name="addresses[]" autocomplete="off">
-					</div>
-				</div>
-			</div>
-		`;
-            $('#divGroup').append(html);
-        });
+            var $baseRow = $('#divGroup .row').first();
+            if (!$baseRow.length) return;
 
+            // Clonar la estructura real de la primera fila para mantener layout/campos.
+            var $newRow = $baseRow.clone(false, false);
+
+            // Limpiar DOM generado por TomSelect en la fila clonada.
+            $newRow.find('.ts-wrapper').remove();
+            $newRow.find('input[name="documents[]"], input[name="names[]"], input[name="addresses[]"], input[name="quotas[]"]').each(function() {
+                $(this).val('').removeAttr('readonly');
+            });
+
+            var $dniInput = $newRow.find('input[name="documents[]"]').first();
+            $dniInput
+                .removeClass('tomselected ts-hidden-accessible')
+                .addClass('ts-document')
+                .removeAttr('id tabindex hidden')
+                .removeData('ts-initialized');
+
+            $newRow.find('.btn-group-search, #btn-group-search').removeAttr('id').addClass('btn-group-search');
+
+            $('#divGroup').append($newRow);
+
+            var $newInput = $('#divGroup .row').last().find('input[name="documents[]"]').first();
+            if (window.initContractDocumentSelect) {
+                window.initContractDocumentSelect($newInput);
+            }
+        });
         $('#btn-remove').click(function() {
             if ($('#divGroup').children().length > 2) {
                 $('#divGroup').children().last().remove();
             } else {
-                console.log('Deben haber 2 personas mínimo para grupo');
+                console.log('Deben haber 2 personas mÃ­nimo para grupo');
             }
         });
 
-        $('#insurance_amount').on('keypress', function(e) {
-            const ch = String.fromCharCode(e.which);
-            if (!/[0-9.]/.test(ch)) e.preventDefault();
-            // evitar segundo punto
-            if (ch === '.' && $(this).val().includes('.')) e.preventDefault();
-        });
-
-        $('#insuranceForm').submit(function(e) {
-            e.preventDefault();
-
-            $.ajax({
-                url: '{{ route('config.insurance') }}',
-                method: 'POST',
-                data: $(this).serialize(),
-                success: function(data) {
-                    if (data.status) {
-                        $('#insuranceModal').modal('hide');
-                        $('#insuranceForm')[0].reset();
-
-                        ToastMessage.fire({
-                                text: 'Registro actualizado'
-                            })
-                            .then(() => location.reload());
-
-                    } else {
-                        ToastError.fire({
-                            text: data.error ? data.error : 'Ocurrió un error'
-                        });
-                    }
-                },
-                error: function(err) {
-                    ToastError.fire({
-                        text: 'Ocurrió un error'
-                    });
-                }
-            });
-
-        });
     </script>
 @endsection
