@@ -108,16 +108,6 @@
 		<div class="card mb-4">
 			<div class="card-body">
 				<h5 class="card-title">
-					Caja chica
-				</h5>
-				<span class="block fs-1 text-center fw-semibold">S/{{ number_format($sales_6, 2) }}</span>
-			</div>
-		</div>
-	</div>
-	<div class="col-md-4">
-		<div class="card mb-4">
-			<div class="card-body">
-				<h5 class="card-title">
 					Total
 				</h5>
 				<span class="block fs-1 text-center fw-semibold">S/{{ number_format($total, 2) }}</span>

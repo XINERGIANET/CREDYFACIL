@@ -128,10 +128,27 @@ class ContractController extends Controller
 
         $type_quota = (int) $request->type_quota;
 
-        // months_number ahora es directamente el número de cuotas
+        // El usuario ingresa el número de cuotas en months_number
         $quotas = $request->months_number;
         // Redondear hacia arriba el número de cuotas para el loop
         $quotas_rounded = ceil($quotas);
+
+        // Calcular el número de meses internamente según el tipo de cuota
+        // Mapeo: 1 => semanal (4 cuotas/mes), 2 => catorcenal (2 cuotas/mes), 4 => mensual (1 cuota/mes)
+        $quotasPerMonthMap = [
+            1 => 4,  // semanal: 4 cuotas por mes
+            2 => 2,  // catorcenal: 2 cuotas por mes
+            4 => 1,  // mensual: 1 cuota por mes
+        ];
+
+        $quotasPerMonth = isset($quotasPerMonthMap[$type_quota]) ? $quotasPerMonthMap[$type_quota] : 4;
+        // Calcular el número de meses: cuotas / cuotas por mes
+        $months = $quotas / $quotasPerMonth;
+
+        // Calcular el seguro usando el número de meses calculado
+        $insurance_cost = floatval($request->insurance_cost) * $months;
+        $insurance_cost = round($insurance_cost * 10) / 10;
+
         $percentage = $interest_percentage;
 
         $interest = $request->requested_amount * ($interest_percentage / 100);
@@ -212,11 +229,12 @@ class ContractController extends Controller
                 $contract->civil_status = $request->civil_status;
 
                 //derivar cuotas anteriores - TODO: preguntar como sería para préstamos grupales
-                Quota::where('paid', 0)
-                    ->whereHas('contract', function ($q) use ($document) {
-                        $q->where('document', $document);
-                    })
-                    ->update(['paid' => 2]);
+                // Quota::where('paid', 0)
+                //     ->whereHas('contract', function ($q) use ($document) {
+                //         $q->where('document', $document);
+                //     })
+                //     ->update(['paid' => 2]);
+
             } elseif ($request->client_type == 'Grupo') {
 
                 $people = [];
@@ -240,8 +258,8 @@ class ContractController extends Controller
 
             $contract->seller_id = $request->seller_id;
             $contract->requested_amount = $request->requested_amount;
-            $contract->months_number = $request->months_number;
-            $contract->quotas_number = $quotas_rounded;
+            $contract->months_number = $months; // Guardar el número de meses calculado
+            $contract->quotas_number = $quotas_rounded; // Guardar el número de cuotas
             $contract->percentage = $percentage;
             $contract->interest = $interest;
             $contract->payable_amount = $payable_amount;
