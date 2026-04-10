@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,15 +13,22 @@
 	<link rel="icon" href="{{ asset('assets/images/xinergia-icon.svg') }}">
 	<style>
 		.watermark {
-			position: fixed; width: 150px; bottom: 20px; right: 20px; z-index: 10;
+			position: fixed;
+			width: 150px;
+			bottom: 20px;
+			right: 20px;
+			z-index: 10;
 		}
+
 		.image-container {
 			position: relative;
 			overflow: hidden;
 		}
+
 		.image-container {
-			background-color: #ffffff;
+			z background-color: #ffffff;
 		}
+
 		.image-container img {
 			width: 100%;
 			height: 100%;
@@ -29,49 +37,54 @@
 		}
 	</style>
 </head>
+
 <body class="d-flex flex-column bg-white">
 	<div class="row g-0 flex-fill">
-	  <div class="col-12 col-lg-6 col-xl-4 border-top-wide border-primary d-flex flex-column justify-content-center">
-	    <div class="container container-tight my-5 px-lg-5">
-	      <div class="text-center mb-4">
-	        <a href="#" class="navbar-brand navbar-brand-autodark"><img src="{{ asset('assets/images/xinergia.png') }}" height="36" alt=""></a>
-	      </div>
-	      <h2 class="h3 text-center mb-3">
-	        Ingresa con tu cuenta
-	      </h2>
-	      <form action="{{ route('auth.check') }}" method="POST" autocomplete="off">
-	      	@csrf
-	        <div class="mb-3">
-	          <label class="form-label">Usuario</label>
-	          <input type="text" name="user" class="form-control @error('user') is-invalid @enderror" placeholder="Tu usuario" value="{{ old('user') }}" autocomplete="off">
-	          @error('user')
-	          <div class="invalid-feedback">{{ $message }}</div>
-	          @enderror
-	        </div>
-	        <div class="mb-2">
-	          <label class="form-label">
-	          	Contraseña
-	          	<span class="form-label-description">
-	          		<a href="#">Olvidé mi contraseña</a>
-	          	</span>
-	          </label>
-	          <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" placeholder="Tu contraseña" autocomplete="off">
-	          @error('password')
-	          <div class="invalid-feedback">{{ $message }}</div>
-	          @enderror
-	        </div>
-	        <div class="form-footer">
-	          <button type="submit" class="btn btn-primary w-100">Iniciar sesión</button>
-	        </div>
-	      </form>
-	      <div class="text-center text-muted mt-3">
-	        Elaborado por Xinergia de <a href="#">Corporacion Xpande</a>
-	      </div>
-	    </div>
-	  </div>
-	  <div class="col-12 col-lg-6 col-xl-8 d-none d-lg-block image-container">
-	    <img src="{{ asset('assets/images/bg-login.jpg') }}" alt="Background" class="h-100 min-vh-100">
-	  </div>
+		<div class="col-12 col-lg-6 col-xl-4 border-top-wide border-primary d-flex flex-column justify-content-center">
+			<div class="container container-tight my-5 px-lg-5">
+				<div class="text-center mb-4">
+					<a href="#" class="navbar-brand navbar-brand-autodark"><img
+							src="{{ asset('assets/images/xinergia.png') }}" height="36" alt=""></a>
+				</div>
+				<h2 class="h3 text-center mb-3">
+					Ingresa con tu cuenta
+				</h2>
+				<form id="loginForm" action="{{ route('auth.check') }}" method="POST" autocomplete="off">
+					@csrf
+					<div class="mb-3">
+						<label class="form-label">Usuario</label>
+						<input type="text" name="user" class="form-control @error('user') is-invalid @enderror"
+							placeholder="Tu usuario" value="{{ old('user') }}" autocomplete="off">
+						@error('user')
+							<div class="invalid-feedback">{{ $message }}</div>
+						@enderror
+					</div>
+					<div class="mb-2">
+						<label class="form-label">
+							Contraseña
+							<span class="form-label-description">
+								<a href="#">Olvidé mi contraseña</a>
+							</span>
+						</label>
+						<input type="password" name="password"
+							class="form-control @error('password') is-invalid @enderror" placeholder="Tu contraseña"
+							autocomplete="off">
+						@error('password')
+							<div class="invalid-feedback">{{ $message }}</div>
+						@enderror
+					</div>
+					<div class="form-footer">
+						<button id="loginBtn" type="submit" class="btn btn-primary w-100">Iniciar sesión</button>
+					</div>
+				</form>
+				<div class="text-center text-muted mt-3">
+					Elaborado por Xinergia de <a href="#">Corporacion Xpande</a>
+				</div>
+			</div>
+		</div>
+		<div class="col-12 col-lg-6 col-xl-8 d-none d-lg-block image-container">
+			<img src="{{ asset('assets/images/bg-login.jpg') }}" alt="Background" class="h-100 min-vh-100">
+		</div>
 	</div>
 	<img src="{{ asset('assets/images/xinergia-white.png') }}" class="d-none d-lg-block watermark">
 	<img src="{{ asset('assets/images/xinergia.png') }}" class="d-lg-none watermark">
@@ -85,6 +98,13 @@
 				'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
 			}
 		});
+
+		$(document).ready(function() {
+			$('#loginForm').submit(function() {
+				$('#loginBtn').prop('disabled', true).text('Iniciando sesión...');
+			});
+		});
 	</script>
 </body>
+
 </html>
