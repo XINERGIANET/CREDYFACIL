@@ -878,11 +878,6 @@
                 $('#contract-debt').text(contract_debt.toFixed(2));
                 $('#difference').text(difference.toFixed(2));
 
-                if(difference < 0){
-                    $('#warning').text('El contrato debe tener una deuda mayor a la acumulada por el cliente');
-                    $('#btn-confirm').prop('disabled', true);
-                }
-
                 $('#confirmDerivedModal').modal('show');
 
                 $('#btn-save').prop('disabled', false);
