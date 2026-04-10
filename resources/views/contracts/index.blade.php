@@ -250,7 +250,7 @@
                             </div>
                             <div class="col-lg-4" id="divBusinessAddress">
                                 <div class="mb-3">
-                                    <label class="form-label">DirecciÃ³n de negocio</label>
+                                    <label class="form-label">Dirección de negocio</label>
                                     <input type="text" class="form-control" name="business_address"
                                         id="business_address" autocomplete="off">
                                 </div>

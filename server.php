@@ -11,8 +11,8 @@ $uri = urldecode(
     parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? ''
 );
 
-// Support projects where the public directory is the project root.
-$publicPath = __DIR__.'/public';
+// Forzamos que la ruta de archivos públicos sea la RAÍZ del proyecto
+$publicPath = __DIR__ . '/public';
 if (!is_dir($publicPath)) {
     $publicPath = __DIR__;
 }
@@ -20,8 +20,8 @@ if (!is_dir($publicPath)) {
 // This file allows us to emulate Apache's "mod_rewrite" functionality from the
 // built-in PHP web server. This provides a convenient way to test a Laravel
 // application without having installed a "real" web server software here.
-if ($uri !== '/' && file_exists($publicPath.$uri)) {
+if ($uri !== '/' && file_exists($publicPath . $uri)) {
     return false;
 }
 
-require_once $publicPath.'/index.php';
+require_once $publicPath . '/index.php';
