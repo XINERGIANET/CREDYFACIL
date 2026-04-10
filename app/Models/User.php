@@ -43,4 +43,9 @@ class User extends Authenticatable
         $list = array_map('trim', $roles);
         return in_array($this->role, $list, true);
     }
+
+    public function contracts()
+    {
+        return $this->hasMany(Contract::class, 'seller_id');
+    }
 }

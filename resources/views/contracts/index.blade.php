@@ -737,7 +737,7 @@
                 },
                 error: function() {
                     ToastError.fire({
-                        text: 'OcurriÃ³ un error'
+                        text: 'Ocurrio un error'
                     });
                 }
             })
@@ -775,7 +775,7 @@
                 },
                 error: function() {
                     ToastError.fire({
-                        text: 'OcurriÃ³ un error'
+                        text: 'Ocurrio un error'
                     });
                 }
             });
@@ -808,7 +808,7 @@
                 },
                 error: function() {
                     ToastError.fire({
-                        text: 'OcurriÃ³ un error al cargar las provincias'
+                        text: 'Ocurrio un error al cargar las provincias'
                     });
                 }
             });
@@ -969,13 +969,13 @@
 
                     } else {
                         ToastError.fire({
-                            text: data.error ? data.error : 'OcurriÃ³ un error'
+                            text: data.error ? data.error : 'Ocurrio un error'
                         });
                     }
                 },
                 error: function(err) {
                     ToastError.fire({
-                        text: 'OcurriÃ³ un error'
+                        text: 'Ocurrio un error'
                     });
                 }
             });
@@ -1001,7 +1001,7 @@
                         },
                         error: function(err) {
                             ToastError.fire({
-                                text: 'OcurriÃ³ un error'
+                                text: 'Ocurrio un error'
                             });
                         }
                     });

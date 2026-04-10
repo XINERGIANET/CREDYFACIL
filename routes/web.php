@@ -68,6 +68,8 @@ Route::middleware('role:admin')->group(function () {
 	Route::put('sellers/drop/{id}', [SellerController::class, 'drop'])->name('sellers.drop');
 	Route::put('sellers/up/{id}', [SellerController::class, 'up'])->name('sellers.up');
 
+	Route::get('sellers/{seller}/contracts', [SellerController::class, 'contracts'])->name('sellers.contracts');
+	Route::get('sellers/{seller}/overdue-contracts', [SellerController::class, 'overdueContracts'])->name('sellers.overdue-contracts');
 	Route::resource('sellers', SellerController::class);
 
 	Route::resource('transfers', TransferController::class);

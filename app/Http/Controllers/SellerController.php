@@ -12,7 +12,7 @@ class SellerController extends Controller
 {
     public function index(Request $request)
     {
-        $sellers = User::seller()->active()->when($request->search, function ($query, $search) {
+        $sellers = User::seller()->active()->withCount('contracts')->when($request->search, function ($query, $search) {
             return $query->where('name', 'like', '%' . $search . '%');
         })->paginate(20);
 
@@ -122,6 +122,24 @@ class SellerController extends Controller
 
         return response()->json([
             'status' => true
+        ]);
+    }
+    //contratos generados por el asesor
+    public function contracts(Request $request, User $seller)
+    {
+        $contracts = Contract::where('seller_id', $seller->id)->get();
+        return response()->json([
+            'status' => true,
+            'contracts' => $contracts
+        ]);
+    }
+
+    public function overdueContracts(Request $request, User $seller)
+    {
+        $contracts = Contract::where('seller_id', $seller->id)->where('state', 2)->get();
+        return response()->json([
+            'status' => true,
+            'contracts' => $contracts
         ]);
     }
 }
