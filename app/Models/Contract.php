@@ -41,6 +41,8 @@ class Contract extends Model
         'last_payment_date',
         'paid',
         'deleted',
+        'approved',
+        'type_quota',
     ];
 
     protected $dates = ['date', 'first_payment_date', 'last_payment_date'];

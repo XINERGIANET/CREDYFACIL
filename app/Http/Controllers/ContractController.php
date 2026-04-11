@@ -160,15 +160,15 @@ class ContractController extends Controller
 
         $interest = $request->requested_amount * ($interest_percentage / 100);
         $payable_amount = $request->requested_amount + $interest + $insurance_cost;
-        
+
         // Calcular el monto base de cada cuota
         $quota_base = $payable_amount / $quotas;
         // Redondear hacia arriba a 1 decimal para las primeras cuotas
         $quota = ceil($quota_base * 10) / 10;
-        
+
         // Calcular cuánto se pagaría con (n-1) cuotas redondeadas
         $total_first_quotas = $quota * ($quotas_rounded - 1);
-        
+
         // La última cuota es la diferencia exacta para que la suma total sea igual a payable_amount
         $last_quota = $payable_amount - $total_first_quotas;
         // Redondear a 1 decimal (sin forzar hacia arriba) para mantener la suma exacta
@@ -275,21 +275,20 @@ class ContractController extends Controller
             $contract->date = $request->date;
             $contract->first_payment_date = reset($quota_dates)['date'];
             $contract->last_payment_date = end($quota_dates)['date'];
+            $contract->type_quota = $type_quota;
+
+            if (auth()->user()->hasRole('admin')) {
+                $contract->approved = 1;
+            } else {
+                $contract->approved = 0;
+            }
 
             $contract->save();
 
             $config->update(['number_pagare' => $nextPagare]);
 
-            foreach ($quota_dates as $quota_date) {
-                $quota_amount = $quota_date['amount'] ?? $quota;
-
-                Quota::create([
-                    'contract_id' => $contract->id,
-                    'number' => $quota_date['number'],
-                    'amount' => $quota_amount,
-                    'debt' => $quota_amount,
-                    'date' => $quota_date['date'],
-                ]);
+            if ($contract->approved) {
+                $this->createQuotas($contract);
             }
 
 
@@ -314,6 +313,64 @@ class ContractController extends Controller
 
     public function update(Request $request, Contract $contract) {}
 
+    private function createQuotas(Contract $contract)
+    {
+        if ($contract->quotas()->count() > 0) {
+            return;
+        }
+
+        $quotas_rounded = $contract->quotas_number;
+        $type_quota = (int) $contract->type_quota;
+        $payable_amount = $contract->payable_amount;
+        $quota_amount_standard = $contract->quota_amount;
+
+        $total_first_quotas = $quota_amount_standard * ($quotas_rounded - 1);
+        $last_quota = $payable_amount - $total_first_quotas;
+        $last_quota = round($last_quota * 10) / 10;
+
+        $date = Carbon::parse($contract->date);
+
+        for ($i = 1; $i <= $quotas_rounded; $i++) {
+            if ($type_quota === 1) {
+                // semanal (cada 7 días)
+                $quota_date = $date->copy()->addWeeks($i);
+            } elseif ($type_quota === 2) {
+                // catorcenal (cada 14 días)
+                $quota_date = $date->copy()->addWeeks($i * 2);
+            } elseif ($type_quota === 4) {
+                // mensual
+                $quota_date = $date->copy()->addMonths($i);
+            } else {
+                // fallback a semanal
+                $quota_date = $date->copy()->addWeeks($i);
+            }
+
+            // Usar el monto ajustado para la última cuota
+            $amount = ($i == $quotas_rounded) ? $last_quota : $quota_amount_standard;
+
+            Quota::create([
+                'contract_id' => $contract->id,
+                'number' => $i,
+                'amount' => $amount,
+                'debt' => $amount,
+                'date' => $quota_date->format('Y-m-d'),
+            ]);
+        }
+    }
+
+    public function approve(Request $request, Contract $contract)
+    {
+        $contract->update([
+            'approved' => 1
+        ]);
+
+        $this->createQuotas($contract);
+
+        return response()->json([
+            'status' => true
+        ]);
+    }
+
     public function destroy(Request $request, Contract $contract)
     {
         $contract->update([
@@ -334,8 +391,9 @@ class ContractController extends Controller
             return $query->where('name', 'like', '%' . $request->q . '%')
                 ->orWhere('group_name', 'like', '%' . $request->q . '%');
         })->where('paid', 0)
-          ->whereDoesntHave('expenses')
-          ->orderBy('name')->orderBy('group_name')->orderBy('date')->get();
+            ->where('approved', 1)
+            ->whereDoesntHave('expenses')
+            ->orderBy('name')->orderBy('group_name')->orderBy('date')->get();
 
         return response()->json(['items' => $contracts->map(function ($contract) {
             return [
@@ -503,7 +561,7 @@ class ContractController extends Controller
             $firstDate = Carbon::parse($contract->quotas->first()->date);
             $secondDate = Carbon::parse($contract->quotas->skip(1)->first()->date);
             $daysDiff = $firstDate->diffInDays($secondDate);
-            
+
             if ($daysDiff >= 25 && $daysDiff <= 35) {
                 $contract->quota_type = 'Mensual';
             } elseif ($daysDiff >= 12 && $daysDiff <= 16) {
@@ -541,7 +599,7 @@ class ContractController extends Controller
     {
         // Cargar cuotas para determinar el tipo de cuota
         $contract->load('quotas');
-        
+
         $fpdf = new PdfModel('P');
 
         $fpdf->AddPage();
@@ -571,12 +629,12 @@ class ContractController extends Controller
         // El tipo de cuota se determina por el intervalo entre fechas
         $quotaTypeName = null;
         $quotaFrequencyText = 'cuotas';
-        
+
         if ($contract->quotas && $contract->quotas->count() > 1) {
             $firstDate = Carbon::parse($contract->quotas->first()->date);
             $secondDate = Carbon::parse($contract->quotas->skip(1)->first()->date);
             $daysDiff = $firstDate->diffInDays($secondDate);
-            
+
             if ($daysDiff >= 25 && $daysDiff <= 35) {
                 $quotaTypeName = 'Mensual';
                 $quotaFrequencyText = 'cuotas mensuales';

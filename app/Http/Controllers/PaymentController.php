@@ -74,7 +74,8 @@ class PaymentController extends Controller
             return $query->whereDate('date', '<=', $end_date);
         })->where('paid', 0)->orderBy('date')->paginate(20);
 
-        return view('payments.charges', compact('quotas', 'sellers'));
+        $payment_methods = PaymentMethod::active()->get();
+        return view('payments.charges', compact('quotas', 'sellers', 'payment_methods'));
     }
 
     public function dues(Request $request){
@@ -99,7 +100,8 @@ class PaymentController extends Controller
             return $query->whereRaw('DATEDIFF(?, date) <= ?', [now()->format('Y-m-d'), $to_days]);
         })->whereDate('date', '<', $date)->where('paid', 0)->paginate(20);
 
-        return view('payments.dues', compact('quotas', 'sellers'));
+        $payment_methods = PaymentMethod::active()->get();
+        return view('payments.dues', compact('quotas', 'sellers', 'payment_methods'));
     }
 
     public function store(Request $request){

@@ -1,4 +1,4 @@
-@extends('template.app')
+﻿@extends('template.app')
 
 @section('title', 'Contratos')
 
@@ -12,11 +12,12 @@
 
     <div class="card">
         <div class="card-header">
-            @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('operations'))
+           
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
                     <i class="ti ti-plus icon"></i> Crear nuevo
                 </button>
-                <a class="btn btn-info" href="{{ route('contracts.sentinel.excel') }}" target="_blank">
+                 @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('operations'))
+                <a class="btn btn-info ms-2" href="{{ route('contracts.sentinel.excel') }}" target="_blank">
                     <i class="ti ti-file-spreadsheet icon"></i> Sentinel
                 </a>
             @endif
@@ -74,7 +75,8 @@
                         <th>interés</th>
                         <th>Monto a pagar</th>
                         <th>Fecha de prestamo</th>
-                        <th></th>
+                        <th>Estado</th>
+                        <th>Aprob.</th>
                         <th>Acción</th>
                     </tr>
                 </thead>
@@ -99,13 +101,26 @@
                                     @endif
                                 </td>
                                 <td>
+                                    @if ($contract->approved)
+                                        <span class="badge bg-success text-white">SÍ</span>
+                                    @else
+                                        <span class="badge bg-warning text-dark">NO</span>
+                                    @endif
+                                </td>
+                                <td>
 
                                     <div class="d-flex gap-2">
                                         <a href="{{ route('contracts.pdfPersonal', $contract) }}" class="btn btn-primary btn-icon"
                                             title="Contrato">
                                             <i class="ti ti-file-text icon"></i>
                                         </a>
-                                        @if (auth()->user()->hasRole('admin'))
+                                        @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('operations'))
+                                            @if (!$contract->approved)
+                                                <button class="btn btn-icon btn-success btn-approve"
+                                                    data-id="{{ $contract->id }}" title="Aprobar">
+                                                    <i class="ti ti-check icon"></i>
+                                                </button>
+                                            @endif
                                             <button class="btn btn-icon btn-danger btn-delete"
                                                 data-id="{{ $contract->id }}">
                                                 <i class="ti ti-x icon"></i>
@@ -1110,6 +1125,31 @@
             } else {
                 console.log('Deben haber 2 personas mÃ­nimo para grupo');
             }
+        });
+
+        $(document).on('click', '.btn-approve', function() {
+            var id = $(this).data('id');
+            ToastConfirm.fire({
+                text: '¿Estás seguro que deseas aprobar este contrato?',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '{{ route('contracts.index') }}/' + id + '/approve',
+                        method: 'PUT',
+                        success: function(data) {
+                            if (data.status) {
+                                ToastMessage.fire({ text: 'Contrato aprobado' })
+                                    .then(() => location.reload());
+                            } else {
+                                ToastError.fire({ text: 'Ocurrió un error' });
+                            }
+                        },
+                        error: function(err) {
+                            ToastError.fire({ text: 'Ocurrió un error' });
+                        }
+                    });
+                }
+            });
         });
 
     </script>

@@ -20,7 +20,7 @@ class SentinelExport implements FromCollection, WithHeadings, WithMapping, WithS
      */
     public function collection()
     {
-        return Contract::active()->with(['quotas', 'district.province.department'])->get();
+        return Contract::active()->where('approved', 1)->with(['quotas', 'district.province.department'])->get();
     }
 
     public function map($contract): array

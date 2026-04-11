@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
 	Route::get('clients', [ClientController::class, 'index'])->name('clients.index');
 
 	Route::get('contracts/api', [ContractController::class, 'api'])->name('contracts.api');
+	Route::put('contracts/{contract}/approve', [ContractController::class, 'approve'])->name('contracts.approve');
 	Route::get('contracts/ending', [ContractController::class, 'ending'])->name('contracts.ending');
 	Route::get('contracts/ending/excel', [ContractController::class, 'endingExcel'])->name('contracts.ending.excel');
 	Route::get('contracts/sentinel/excel', [ContractController::class, 'sentinelExcel'])->name('contracts.sentinel.excel');
