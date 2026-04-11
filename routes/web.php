@@ -44,6 +44,7 @@ Route::middleware('auth')->group(function () {
 	Route::get('contracts/api', [ContractController::class, 'api'])->name('contracts.api');
 	Route::get('contracts/ending', [ContractController::class, 'ending'])->name('contracts.ending');
 	Route::get('contracts/ending/excel', [ContractController::class, 'endingExcel'])->name('contracts.ending.excel');
+	Route::get('contracts/sentinel/excel', [ContractController::class, 'sentinelExcel'])->name('contracts.sentinel.excel');
 	Route::get('contracts/{contract}/pdf', [ContractController::class, 'pdf'])->name('contracts.pdf');
 	Route::get('contracts/{contract}/pdfPersonal', [ContractController::class, 'pdfPersonal'])->name('contracts.pdfPersonal');
 	Route::resource('contracts', ContractController::class);
@@ -52,6 +53,7 @@ Route::middleware('auth')->group(function () {
 
 	Route::get('payments/charges', [PaymentController::class, 'charges'])->name('payments.charges');
 	Route::get('contracts/charges/excel', [PaymentController::class, 'chargesExcel'])->name('payments.charges.excel');
+	Route::get('payments/dues/excel', [PaymentController::class, 'duesExcel'])->name('payments.dues.excel');
 	Route::get('payments/dues', [PaymentController::class, 'dues'])->name('payments.dues');
 	Route::resource('payments', PaymentController::class);
 
@@ -68,6 +70,8 @@ Route::middleware('role:admin')->group(function () {
 	Route::put('sellers/drop/{id}', [SellerController::class, 'drop'])->name('sellers.drop');
 	Route::put('sellers/up/{id}', [SellerController::class, 'up'])->name('sellers.up');
 
+	Route::get('sellers/{seller}/contracts/excel', [SellerController::class, 'contractsExcel'])->name('sellers.contracts.excel');
+	Route::get('sellers/{seller}/overdue-contracts/excel', [SellerController::class, 'overdueContractsExcel'])->name('sellers.overdue-contracts.excel');
 	Route::get('sellers/{seller}/contracts', [SellerController::class, 'contracts'])->name('sellers.contracts');
 	Route::get('sellers/{seller}/overdue-contracts', [SellerController::class, 'overdueContracts'])->name('sellers.overdue-contracts');
 	Route::resource('sellers', SellerController::class);

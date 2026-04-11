@@ -12,6 +12,9 @@
 </nav>
 
 <div class="card">
+	<div class="card-header">
+		<a class="btn btn-success" href="{{ route('payments.dues.excel', request()->all()) }}" target="_blank">Excel</a>
+	</div>
 	@if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
 	<div class="card-body border-bottom">
 		<form>

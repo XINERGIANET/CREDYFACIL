@@ -49,47 +49,48 @@
 				<tbody>
 					@if($sellers->count() > 0)
 						@foreach($sellers as $seller)
-							<tr>
-								<td>{{ $seller->document }}</td>
-								<td>{{ $seller->name }}</td>
-								<td>{{ $seller->user }}</td>
-								<td>{{ $seller->phone }}</td>
-								<td>{{ $seller->address }}</td>
-								<td>{{ $seller->email }}</td>
-								<td>
-									<button class="btn btn-link btn-contracts text-primary p-0" data-id="{{ $seller->id }}">
-										{{ $seller->contracts_count }}
-									</button>
-								</td>
-								<td>
-									S/ {{ $seller->contracts()->sum('payable_amount') }}
-								</td>
-								<td>
-									<button class="btn btn-link btn-overdue text-danger p-0" data-id="{{ $seller->id }}">
-										{{ $seller->contracts()->where('state', 2)->count() }}
-									</button>
-								</td>
-								<td>{{ $seller->state == 0 ? 'Activo' : 'Inactivo' }}</td>
-								<td>
-									<div class="d-flex gap-2">
-										<button class="btn btn-primary btn-icon btn-edit " data-id="{{ $seller->id }}">
-											<i class="ti ti-pencil icon"></i>
+								<tr>
+									<td>{{ $seller->document }}</td>
+									<td>{{ $seller->name }}</td>
+									<td>{{ $seller->user }}</td>
+									<td>{{ $seller->phone }}</td>
+									<td>{{ $seller->address }}</td>
+									<td>{{ $seller->email }}</td>
+									<td>
+										<button class="btn btn-link btn-contracts text-primary p-0" data-id="{{ $seller->id }}">
+											{{ $seller->contracts_count }}
 										</button>
-										@if ($seller->state == 0)
-											<button class="btn btn-icon btn-warning btn-drop" data-id="{{ $seller->id }}">
-												<i class="ti ti-arrow-down icon"></i>
-											</button>
-										@else
-											<button class="btn btn-icon btn-success btn-up" data-id="{{ $seller->id }}">
-												<i class="ti ti-arrow-up icon"></i>
-											</button>
-										@endif
-										<button class="btn btn-icon btn-danger btn-delete" data-id="{{ $seller->id }}">
-											<i class="ti ti-x icon"></i>
+									</td>
+									<td>
+										S/ {{ $seller->contracts()->sum('payable_amount') }}
+									</td>
+									<td>
+										<button class="btn btn-link btn-overdue text-danger p-0" data-id="{{ $seller->id }}">
+											{{ $seller->contracts()->whereHas('quotas', function ($q) {
+							$q->where('paid', 0)->whereDate('date', '<', now()); })->count() }}
 										</button>
-									</div>
-								</td>
-							</tr>
+									</td>
+									<td>{{ $seller->state == 0 ? 'Activo' : 'Inactivo' }}</td>
+									<td>
+										<div class="d-flex gap-2">
+											<button class="btn btn-primary btn-icon btn-edit " data-id="{{ $seller->id }}">
+												<i class="ti ti-pencil icon"></i>
+											</button>
+											@if ($seller->state == 0)
+												<button class="btn btn-icon btn-warning btn-drop" data-id="{{ $seller->id }}">
+													<i class="ti ti-arrow-down icon"></i>
+												</button>
+											@else
+												<button class="btn btn-icon btn-success btn-up" data-id="{{ $seller->id }}">
+													<i class="ti ti-arrow-up icon"></i>
+												</button>
+											@endif
+											<button class="btn btn-icon btn-danger btn-delete" data-id="{{ $seller->id }}">
+												<i class="ti ti-x icon"></i>
+											</button>
+										</div>
+									</td>
+								</tr>
 						@endforeach
 					@else
 						<tr>
@@ -245,6 +246,9 @@
 			<div class="modal-content">
 				<div class="modal-header">
 					<h5 class="modal-title">Contratos generados</h5>
+					<div class="ms-auto me-2">
+						<a href="#" id="btnExcelContracts" class="btn btn-success btn-sm" target="_blank">Excel</a>
+					</div>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
 				<div class="modal-body">
@@ -275,6 +279,9 @@
 			<div class="modal-content">
 				<div class="modal-header">
 					<h5 class="modal-title">Clientes en mora</h5>
+					<div class="ms-auto me-2">
+						<a href="#" id="btnExcelOverdue" class="btn btn-success btn-sm" target="_blank">Excel</a>
+					</div>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
 				<div class="modal-body">
@@ -285,11 +292,18 @@
 									<th>DNI</th>
 									<th>Nombre</th>
 									<th>Monto</th>
-									<th>Fecha</th>
+									<th>Dias de mora</th>
 								</tr>
 							</thead>
 							<tbody id="overdueBody">
 							</tbody>
+							<tfoot>
+								<tr>
+									<th colspan="2" class="text-end">Total</th>
+									<th id="overdueTotal">S/ 0.00</th>
+									<th></th>
+								</tr>
+							</tfoot>
 						</table>
 					</div>
 				</div>
@@ -515,6 +529,7 @@
 		});
 		$(document).on('click', '.btn-contracts', function () {
 			var id = $(this).data('id');
+			$('#btnExcelContracts').attr('href', '{{ route("sellers.contracts.excel", ":id") }}'.replace(':id', id));
 			$('#contractsBody').html('<tr><td colspan="4" class="text-center">Cargando...</td></tr>');
 			$('#contractsModal').modal('show');
 
@@ -526,13 +541,13 @@
 					if (data.status && data.contracts.length > 0) {
 						data.contracts.forEach(function (contract) {
 							html += `
-																		<tr>
-																			<td>${contract.number_pagare}</td>
-																			<td>${contract.group_name || contract.name}</td>
-																			<td>S/ ${contract.payable_amount}</td>
-																			<td>${contract.date}</td>
-																		</tr>
-																	`;
+																						<tr>
+																							<td>${contract.number_pagare}</td>
+																							<td>${contract.group_name || contract.name}</td>
+																							<td>S/ ${contract.payable_amount}</td>
+																							<td>${contract.date}</td>
+																						</tr>
+																					`;
 						});
 					} else {
 						html = '<tr><td colspan="4" class="text-center">No tiene contratos generados</td></tr>';
@@ -547,6 +562,7 @@
 
 		$(document).on('click', '.btn-overdue', function () {
 			var id = $(this).data('id');
+			$('#btnExcelOverdue').attr('href', '{{ route("sellers.overdue-contracts.excel", ":id") }}'.replace(':id', id));
 			$('#overdueBody').html('<tr><td colspan="4" class="text-center">Cargando...</td></tr>');
 			$('#overdueModal').modal('show');
 
@@ -555,21 +571,25 @@
 				method: 'GET',
 				success: function (data) {
 					var html = '';
+					var total = 0;
 					if (data.status && data.contracts.length > 0) {
 						data.contracts.forEach(function (contract) {
+							total += parseFloat(contract.payable_amount);
 							html += `
-								<tr>
-									<td>${contract.document}</td>
-									<td>${contract.group_name || contract.name}</td>
-									<td>S/ ${contract.payable_amount}</td>
-									<td>${contract.date}</td>
-								</tr>
-							`;
+												<tr>
+													<td>${contract.document}</td>
+													<td>${contract.group_name || contract.name}</td>
+													<td>S/ ${contract.payable_amount}</td>
+
+													<td>${contract.days_overdue}</td>
+												</tr>
+											`;
 						});
 					} else {
 						html = '<tr><td colspan="4" class="text-center">No tiene clientes en mora</td></tr>';
 					}
 					$('#overdueBody').html(html);
+					$('#overdueTotal').html('S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 				},
 				error: function (err) {
 					$('#overdueBody').html('<tr><td colspan="4" class="text-center text-danger">Ocurrió un error al cargar los contratos</td></tr>');

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Exports\EndingContractsExport;
+use App\Exports\SentinelExport;
 use App\Models\Config;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Contract;
@@ -73,6 +74,12 @@ class ContractController extends Controller
     {
         $name = "ContratosPorFinalizar_" . now()->format('d_m_Y') . ".xlsx";
         return Excel::download(new EndingContractsExport, $name);
+    }
+
+    public function sentinelExcel(Request $request)
+    {
+        $name = "Sentinel_" . now()->format('d_m_Y') . ".xlsx";
+        return Excel::download(new SentinelExport, $name);
     }
 
     public function store(Request $request)
@@ -326,7 +333,10 @@ class ContractController extends Controller
         })->where(function ($query) use ($request) {
             return $query->where('name', 'like', '%' . $request->q . '%')
                 ->orWhere('group_name', 'like', '%' . $request->q . '%');
-        })->where('paid', 0)->orderBy('name')->orderBy('group_name')->orderBy('date')->get();
+        })->where('paid', 0)
+          ->whereDoesntHave('expenses')
+          ->orderBy('name')->orderBy('group_name')->orderBy('date')->get();
+
         return response()->json(['items' => $contracts->map(function ($contract) {
             return [
                 'id' => $contract->id,

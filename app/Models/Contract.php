@@ -104,4 +104,8 @@ class Contract extends Model
 
         return $html;
     }
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class)->active();
+    }
 }

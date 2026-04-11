@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Exports\ChargesExport;
+use App\Exports\DuesExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Contract;
 use App\Models\Quota;
@@ -47,10 +48,7 @@ class PaymentController extends Controller
         $payment_methods = PaymentMethod::active()->get();
         $sellers = User::seller()->where('state', 0)->active()->get();
 
-        $day = now()->format('N'); // 1-5
-        $hour = now()->format('G'); // 7 - 20
-
-        return view('payments.index', compact('payments', 'payment_methods', 'sellers', 'day', 'hour', 'total'));
+        return view('payments.index', compact('payments', 'payment_methods', 'sellers', 'total'));
     }
 
     public function charges(Request $request){
@@ -106,15 +104,6 @@ class PaymentController extends Controller
 
     public function store(Request $request){
 
-        $day = now()->format('N'); // 1-5
-        $hour = now()->format('G'); // 7 - 20
-
-        if(!auth()->user()->hasRole('admin') && ($day > 5 || $hour < 8 || $hour > 19)){
-            return response()->json([
-                'status' => false,
-                'error' => 'El registro de pagos se encuentra fuera de horario.'
-            ]);
-        }
 
         $validator = Validator::make($request->all(), [
             'quota_id' => 'required',
@@ -296,5 +285,10 @@ class PaymentController extends Controller
     public function chargesExcel(Request $request){
         $name = "GestionDeCobranza_".now()->format('d_m_Y').".xlsx";
         return Excel::download(new ChargesExport, $name);
+    }
+
+    public function duesExcel(Request $request){
+        $name = "GestionDeMora_".now()->format('d_m_Y').".xlsx";
+        return Excel::download(new DuesExport, $name);
     }
 }

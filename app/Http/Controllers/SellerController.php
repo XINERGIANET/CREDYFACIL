@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Contract;
 use App\Models\User;
+use App\Exports\SellerContractsExport;
+use App\Exports\SellerOverdueExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class SellerController extends Controller
 {
@@ -136,10 +139,40 @@ class SellerController extends Controller
 
     public function overdueContracts(Request $request, User $seller)
     {
-        $contracts = Contract::where('seller_id', $seller->id)->where('state', 2)->get();
+        $contracts = Contract::where('seller_id', $seller->id)
+            ->whereHas('quotas', function($q){
+                $q->where('paid', 0)->whereDate('date', '<', now());
+            })->with('quotas')->get();
+
+        $contracts = $contracts->map(function($contract) {
+            $oldestOverdueQuota = $contract->quotas
+                ->where('paid', 0)
+                ->filter(fn($q) => \Carbon\Carbon::parse($q->date)->lt(now()))
+                ->sortBy('date')
+                ->first();
+
+            $contract->days_overdue = $oldestOverdueQuota
+                ? (int) \Carbon\Carbon::parse($oldestOverdueQuota->date)->diffInDays(now())
+                : 0;
+
+            return $contract;
+        });
+
         return response()->json([
             'status' => true,
             'contracts' => $contracts
         ]);
+    }
+
+    public function contractsExcel(Request $request, User $seller)
+    {
+        $name = "Contratos_" . $seller->name . "_" . now()->format('d_m_Y') . ".xlsx";
+        return Excel::download(new SellerContractsExport($seller->id), $name);
+    }
+
+    public function overdueContractsExcel(Request $request, User $seller)
+    {
+        $name = "Mora_" . $seller->name . "_" . now()->format('d_m_Y') . ".xlsx";
+        return Excel::download(new SellerOverdueExport($seller->id), $name);
     }
 }
