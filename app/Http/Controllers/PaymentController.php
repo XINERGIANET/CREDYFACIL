@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use App\Exports\ChargesExport;
 use App\Exports\DuesExport;
@@ -292,5 +293,18 @@ class PaymentController extends Controller
     public function duesExcel(Request $request){
         $name = "GestionDeMora_".now()->format('d_m_Y').".xlsx";
         return Excel::download(new DuesExport, $name);
+    }
+
+    public function image(Payment $payment){
+        if(!$payment->image || !Storage::disk('public')->exists($payment->image)){
+            abort(404);
+        }
+
+        $path = Storage::disk('public')->path($payment->image);
+        $mime = mime_content_type($path) ?: 'application/octet-stream';
+
+        return response()->file($path, [
+            'Content-Type' => $mime,
+        ]);
     }
 }

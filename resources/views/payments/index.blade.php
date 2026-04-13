@@ -126,7 +126,7 @@
 								@endif
 
 								@if($payment->image)
-								<a class="btn btn-primary btn-icon" href="{{ asset('storage/'.$payment->image) }}" target="_blank">
+								<a class="btn btn-primary btn-icon" href="{{ route('payments.image', $payment->id) }}" target="_blank">
 									<i class="ti ti-photo icon"></i>
 								</a>
 								@endif
