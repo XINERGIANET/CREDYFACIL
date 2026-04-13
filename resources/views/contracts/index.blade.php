@@ -1,4 +1,4 @@
-﻿@extends('template.app')
+@extends('template.app')
 
 @section('title', 'Contratos')
 
@@ -121,11 +121,17 @@
                                                     <i class="ti ti-check icon"></i>
                                                 </button>
                                             @endif
+                                            <button class="btn btn-icon btn-warning btn-edit"
+                                                    data-id="{{ $contract->id }}" title="Editar">
+                                                    <i class="ti ti-edit icon"></i>
+                                                </button>
                                             <button class="btn btn-icon btn-danger btn-delete"
                                                 data-id="{{ $contract->id }}">
                                                 <i class="ti ti-x icon"></i>
                                             </button>
+                                            
                                         @endif
+                                        
                                     </div>
                                 </td>
                             </tr>
@@ -446,7 +452,7 @@
             </div>
         </div>
     </div>
-
+    <!--Que solo se pueda editar el asesor, nombre y las cuotas-->
     <div class="modal modal-blur fade" id="editModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -462,6 +468,28 @@
                                     <label class="form-label">Nombre</label>
                                     <input type="text" class="form-control" name="name" id="editName"
                                         autocomplete="off">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Asesor</label>
+                                    <select class="form-select" name="seller_id" id="editSeller">
+                                        <option value="">Seleccionar</option>
+                                        @foreach ($sellers as $seller)
+                                            <option value="{{ $seller->id }}">{{ $seller->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Número de cuotas</label>
+                                    <input type="number" class="form-control" name="quotas_number" id="editMonthsNumber"
+                                        autocomplete="off">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Tipo de cuota</label>
+                                    <select class="form-select" name="type_quota" id="editTypeQuota">
+                                        <option value="1">Semanal</option>
+                                        <option value="2">Catorcenal</option>
+                                        <option value="4">Mensual</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -954,6 +982,9 @@
                 method: 'GET',
                 success: function(data) {
                     $('#editName').val(data.name);
+                    $('#editSeller').val(data.seller_id);
+                    $('#editMonthsNumber').val(data.quotas_number);
+                    $('#editTypeQuota').val(data.type_quota);
                     $('#editId').val(data.id);
                     $('#editModal').modal('show');
                 },

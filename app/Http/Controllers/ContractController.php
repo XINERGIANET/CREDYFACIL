@@ -311,7 +311,31 @@ class ContractController extends Controller
         return response()->json($contract);
     }
 
-    public function update(Request $request, Contract $contract) {}
+    public function update(Request $request, Contract $contract)
+    {
+        $validator = Validator::make($request->all(), [
+            'name'          => 'nullable|string',
+            'seller_id'     => 'required|exists:users,id',
+            'quotas_number' => 'required|integer|min:1',
+            'type_quota'    => 'required|in:1,2,4',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'error'  => $validator->errors()->first(),
+            ]);
+        }
+
+        $contract->update([
+            'name'         => $request->name ?? $contract->name,
+            'seller_id'    => $request->seller_id,
+            'quotas_number'=> $request->quotas_number,
+            'type_quota'   => $request->type_quota,
+        ]);
+
+        return response()->json(['status' => true]);
+    }
 
     private function createQuotas(Contract $contract)
     {
