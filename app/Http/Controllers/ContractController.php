@@ -314,10 +314,8 @@ class ContractController extends Controller
     public function update(Request $request, Contract $contract)
     {
         $validator = Validator::make($request->all(), [
-            'name'          => 'nullable|string',
-            'seller_id'     => 'required|exists:users,id',
-            'quotas_number' => 'required|integer|min:1',
-            'type_quota'    => 'required|in:1,2,4',
+            'name'      => 'nullable|string',
+            'seller_id' => 'required|exists:users,id',
         ]);
 
         if ($validator->fails()) {
@@ -328,10 +326,8 @@ class ContractController extends Controller
         }
 
         $contract->update([
-            'name'         => $request->name ?? $contract->name,
-            'seller_id'    => $request->seller_id,
-            'quotas_number'=> $request->quotas_number,
-            'type_quota'   => $request->type_quota,
+            'name'      => $request->name ?? $contract->name,
+            'seller_id' => $request->seller_id,
         ]);
 
         return response()->json(['status' => true]);

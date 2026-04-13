@@ -478,19 +478,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Número de cuotas</label>
-                                    <input type="number" class="form-control" name="quotas_number" id="editMonthsNumber"
-                                        autocomplete="off">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Tipo de cuota</label>
-                                    <select class="form-select" name="type_quota" id="editTypeQuota">
-                                        <option value="1">Semanal</option>
-                                        <option value="2">Catorcenal</option>
-                                        <option value="4">Mensual</option>
-                                    </select>
-                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -983,8 +971,6 @@
                 success: function(data) {
                     $('#editName').val(data.name);
                     $('#editSeller').val(data.seller_id);
-                    $('#editMonthsNumber').val(data.quotas_number);
-                    $('#editTypeQuota').val(data.type_quota);
                     $('#editId').val(data.id);
                     $('#editModal').modal('show');
                 },
