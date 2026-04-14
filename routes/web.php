@@ -56,6 +56,7 @@ Route::middleware('auth')->group(function () {
 	Route::get('contracts/charges/excel', [PaymentController::class, 'chargesExcel'])->name('payments.charges.excel');
 	Route::get('payments/dues/excel', [PaymentController::class, 'duesExcel'])->name('payments.dues.excel');
 	Route::get('payments/dues', [PaymentController::class, 'dues'])->name('payments.dues');
+	Route::get('payments/excel', [PaymentController::class, 'excel'])->name('payments.excel');
 	Route::get('payments/{payment}/image', [PaymentController::class, 'image'])->name('payments.image');
 	Route::resource('payments', PaymentController::class);
 

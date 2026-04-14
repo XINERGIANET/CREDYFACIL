@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use App\Exports\ChargesExport;
 use App\Exports\DuesExport;
+use App\Exports\PaymentsExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Contract;
 use App\Models\Quota;
@@ -293,6 +294,12 @@ class PaymentController extends Controller
     public function duesExcel(Request $request){
         $name = "GestionDeMora_".now()->format('d_m_Y').".xlsx";
         return Excel::download(new DuesExport, $name);
+    }
+
+    public function excel(Request $request)
+    {
+        $name = "Pagos_" . now()->format('d_m_Y') . ".xlsx";
+        return Excel::download(new PaymentsExport, $name);
     }
 
     public function image(Payment $payment){
