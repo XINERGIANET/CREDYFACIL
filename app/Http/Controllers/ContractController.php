@@ -6,7 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use App\Exports\EndingContractsExport;
+use App\Exports\ContractsExport;
+ use App\Exports\EndingContractsExport;
 use App\Exports\SentinelExport;
 use App\Models\Config;
 use Maatwebsite\Excel\Facades\Excel;
@@ -80,6 +81,12 @@ class ContractController extends Controller
     {
         $name = "Sentinel_" . now()->format('d_m_Y') . ".xlsx";
         return Excel::download(new SentinelExport, $name);
+    }
+
+    public function excel(Request $request)
+    {
+        $name = "Contratos_" . now()->format('d_m_Y') . ".xlsx";
+        return Excel::download(new ContractsExport, $name);
     }
 
     public function store(Request $request)

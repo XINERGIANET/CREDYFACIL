@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
 	Route::get('contracts/sentinel/excel', [ContractController::class, 'sentinelExcel'])->name('contracts.sentinel.excel');
 	Route::get('contracts/{contract}/pdf', [ContractController::class, 'pdf'])->name('contracts.pdf');
 	Route::get('contracts/{contract}/pdfPersonal', [ContractController::class, 'pdfPersonal'])->name('contracts.pdfPersonal');
+	Route::get('contracts/excel', [ContractController::class, 'excel'])->name('contracts.excel');
 	Route::resource('contracts', ContractController::class);
 
 	Route::get('quotas/api', [QuotaController::class, 'api'])->name('quotas.api');

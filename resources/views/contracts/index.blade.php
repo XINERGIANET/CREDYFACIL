@@ -12,15 +12,18 @@
 
     <div class="card">
         <div class="card-header">
-           
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
-                    <i class="ti ti-plus icon"></i> Crear nuevo
-                </button>
-                 @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('operations'))
+
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+                <i class="ti ti-plus icon"></i> Crear nuevo
+            </button>
+            @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('operations'))
                 <a class="btn btn-info ms-2" href="{{ route('contracts.sentinel.excel') }}" target="_blank">
                     <i class="ti ti-file-spreadsheet icon"></i> Sentinel
                 </a>
             @endif
+            <button class="btn btn-success ms-2" id="btn-excel">
+                <i class="ti ti-file-export icon"></i> Excel
+            </button>
         </div>
         @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
             <div class="card-body border-bottom">
@@ -110,8 +113,8 @@
                                 <td>
 
                                     <div class="d-flex gap-2">
-                                        <a href="{{ route('contracts.pdfPersonal', $contract) }}" class="btn btn-primary btn-icon"
-                                            title="Contrato">
+                                        <a href="{{ route('contracts.pdfPersonal', $contract) }}"
+                                            class="btn btn-primary btn-icon" title="Contrato">
                                             <i class="ti ti-file-text icon"></i>
                                         </a>
                                         @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('operations'))
@@ -121,17 +124,16 @@
                                                     <i class="ti ti-check icon"></i>
                                                 </button>
                                             @endif
-                                            <button class="btn btn-icon btn-warning btn-edit"
-                                                    data-id="{{ $contract->id }}" title="Editar">
-                                                    <i class="ti ti-edit icon"></i>
-                                                </button>
+                                            <button class="btn btn-icon btn-warning btn-edit" data-id="{{ $contract->id }}"
+                                                title="Editar">
+                                                <i class="ti ti-edit icon"></i>
+                                            </button>
                                             <button class="btn btn-icon btn-danger btn-delete"
                                                 data-id="{{ $contract->id }}">
                                                 <i class="ti ti-x icon"></i>
                                             </button>
-                                            
                                         @endif
-                                        
+
                                     </div>
                                 </td>
                             </tr>
@@ -384,22 +386,15 @@
                             <div class="col-lg-4">
                                 <div class="mb-3">
                                     <label class="form-label required">Monto solicitado</label>
-                                    <input type="text" class="form-control" name="requested_amount" id="requested_amount"
-                                        autocomplete="off">
+                                    <input type="text" class="form-control" name="requested_amount"
+                                        id="requested_amount" autocomplete="off">
                                 </div>
                             </div>
                             <div class="col-lg-2">
                                 <div class="mb-3">
                                     <label class="form-label required">Número de cuotas</label>
-                                    <input 
-                                        type="number"
-                                        class="form-control"
-                                        name="months_number"
-                                        id="months_number"
-                                        autocomplete="off"
-                                        step="any"
-                                        min="0"
-                                    >
+                                    <input type="number" class="form-control" name="months_number" id="months_number"
+                                        autocomplete="off" step="any" min="0">
                                 </div>
                             </div>
                             <div class="col-lg-2">
@@ -546,14 +541,13 @@
 
 @section('scripts')
     <script>
-
         var totalDebt = 0;
 
         $(document).ready(function() {
 
             var queryString = window.location.search;
             var parametros = new URLSearchParams(queryString);
-            
+
 
             if (parametros.get('modal') == 'create') {
                 $('#createModal').modal('show');
@@ -684,7 +678,8 @@
                                 } else {
                                     var html = '';
                                     data.quotas.forEach(function(quota) {
-                                        totalDebt += parseFloat(String(quota.debt).replace(',', '.'));
+                                        totalDebt += parseFloat(String(quota.debt)
+                                            .replace(',', '.'));
                                         html += `
 										<tr>
 											<td>${quota.contract_id}</td>
@@ -740,6 +735,7 @@
 
         });
 
+        //Boton de buscar
         $('#btn-search').click(function() {
 
             var dni = $('#document').val().trim();
@@ -820,11 +816,11 @@
             var department_id = $(this).val();
             var $provinceSelect = $('#province_id');
             var $districtSelect = $('#district_id');
-            
+
             // Limpiar provincias y distritos
             $provinceSelect.html('<option value="">Seleccionar</option>');
             $districtSelect.html('<option value="">Seleccionar</option>');
-            
+
             if (!department_id) {
                 return;
             }
@@ -837,7 +833,8 @@
                 },
                 success: function(data) {
                     $.each(data, function(index, province) {
-                        $provinceSelect.append('<option value="' + province.id + '">' + province.name + '</option>');
+                        $provinceSelect.append('<option value="' + province.id + '">' + province
+                            .name + '</option>');
                     });
                 },
                 error: function() {
@@ -851,10 +848,10 @@
         $(document).on('change', '#province_id', function() {
             var province_id = $(this).val();
             var $districtSelect = $('#district_id');
-            
+
             // Limpiar distritos
             $districtSelect.html('<option value="">Seleccionar</option>');
-            
+
             if (!province_id) {
                 return;
             }
@@ -867,7 +864,8 @@
                 },
                 success: function(data) {
                     $.each(data, function(index, district) {
-                        $districtSelect.append('<option value="' + district.id + '">' + district.name + '</option>');
+                        $districtSelect.append('<option value="' + district.id + '">' + district
+                            .name + '</option>');
                     });
                 },
                 error: function() {
@@ -884,22 +882,22 @@
             $('#warning').text('');
             e.preventDefault();
 
-            if(totalDebt > 0) {
-                
+            if (totalDebt > 0) {
+
                 var base_insurance = parseFloat(String($('#insurance_cost').val()).replace(',', '.')) || 0;
                 var quotas = parseFloat(String($('#months_number').val()).replace(',', '.')) || 0;
                 var type_quota = parseInt($('select[name="type_quota"]').val()) || 1;
-                
+
                 // Calcular el número de meses según el tipo de cuota
                 // 1 => semanal (4 cuotas/mes), 2 => catorcenal (2 cuotas/mes), 4 => mensual (1 cuota/mes)
                 var quotasPerMonthMap = {
-                    1: 4,  // semanal: 4 cuotas por mes
-                    2: 2,  // catorcenal: 2 cuotas por mes
-                    4: 1   // mensual: 1 cuota por mes
+                    1: 4, // semanal: 4 cuotas por mes
+                    2: 2, // catorcenal: 2 cuotas por mes
+                    4: 1 // mensual: 1 cuota por mes
                 };
                 var quotasPerMonth = quotasPerMonthMap[type_quota] || 4;
                 var months = quotas / quotasPerMonth;
-                
+
                 var insurance_cost = Math.round(base_insurance * months * 100) / 100;
                 var interest_percentage = parseFloat(String($('#interest').val()).replace(',', '.')) || 0;
                 var requested_amount = parseFloat(String($('#requested_amount').val()).replace(',', '.')) || 0;
@@ -955,7 +953,7 @@
         $(document).on('click', '#btn-confirm', function() {
 
             totalDebt = 0;
-            
+
             $('#storeForm').submit();
             $('#confirmDerivedModal').modal('hide');
         });
@@ -1116,7 +1114,9 @@
 
             // Limpiar DOM generado por TomSelect en la fila clonada.
             $newRow.find('.ts-wrapper').remove();
-            $newRow.find('input[name="documents[]"], input[name="names[]"], input[name="addresses[]"], input[name="quotas[]"]').each(function() {
+            $newRow.find(
+                'input[name="documents[]"], input[name="names[]"], input[name="addresses[]"], input[name="quotas[]"]'
+                ).each(function() {
                 $(this).val('').removeAttr('readonly');
             });
 
@@ -1155,19 +1155,31 @@
                         method: 'PUT',
                         success: function(data) {
                             if (data.status) {
-                                ToastMessage.fire({ text: 'Contrato aprobado' })
+                                ToastMessage.fire({
+                                        text: 'Contrato aprobado'
+                                    })
                                     .then(() => location.reload());
                             } else {
-                                ToastError.fire({ text: 'Ocurrió un error' });
+                                ToastError.fire({
+                                    text: 'Ocurrió un error'
+                                });
                             }
                         },
                         error: function(err) {
-                            ToastError.fire({ text: 'Ocurrió un error' });
+                            ToastError.fire({
+                                text: 'Ocurrió un error'
+                            });
                         }
                     });
                 }
             });
         });
 
+        //Boton de excel?
+        $('#btn-excel').click(function() {
+            const params = new URLSearchParams(window.location.search);
+            const url = `{{ route('contracts.excel') }}?${params.toString()}`;
+            window.location.href = url;
+        });
     </script>
 @endsection
