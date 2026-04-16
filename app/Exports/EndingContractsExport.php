@@ -47,8 +47,10 @@ class EndingContractsExport implements FromCollection, WithHeadings, WithMapping
             optional($contract)->seller->name,
             $contract->requested_amount,
             $contract->quotas_number,
+            $contract->percentage . '%',
             $contract->interest,
             $contract->payable_amount,
+            $contract->insurance_amount,
             $contract->date->format('d/m/Y'),
             $contract->last_payment_date->format('d/m/Y')
         ];
@@ -61,8 +63,10 @@ class EndingContractsExport implements FromCollection, WithHeadings, WithMapping
             'Asesor C.',
             'Monto solicitado',
             'Cuotas',
+            '% de interés',
             'Interés',
             'Monto a pagar',
+            'Monto seguro',
             'Fecha de prestamo',
             'Fecha de última cuota',
         ];
