@@ -31,14 +31,28 @@ class SentinelExport implements FromCollection, WithHeadings, WithMapping, WithS
         $materno = $nameParts[1] ?? '';
         $nombres = implode(' ', array_slice($nameParts, 2));
 
-        $vencida = $contract->quotas->where('paid', 0)->filter(function ($q) {
-            return Carbon::parse($q->date)->lte(now());
-        })->sum('debt');
+        $unpaid = $contract->quotas->where('paid', 0);
 
-        $maxDelay = 0;
-        foreach ($contract->quotas->where('paid', 0) as $quota) {
-            $days = Carbon::parse($quota->date)->diffInDays(now(), false);
-            if ($days > $maxDelay) $maxDelay = $days;
+        $vigente   = 0;
+        $vencidaLt30 = 0;
+        $vencidaGt30 = 0;
+        $maxDelay  = 0;
+
+        foreach ($unpaid as $quota) {
+            $days = (int) Carbon::parse($quota->date)->diffInDays(now(), false);
+
+            if ($days <= 0) {
+                // Cuota aún no vencida → vigente
+                $vigente += $quota->debt;
+            } elseif ($days <= 30) {
+                $vencidaLt30 += $quota->debt;
+            } else {
+                $vencidaGt30 += $quota->debt;
+            }
+
+            if ($days > $maxDelay) {
+                $maxDelay = $days;
+            }
         }
 
         // Calificacion based on max delay (standard Peruvian bank rules)
@@ -51,22 +65,24 @@ class SentinelExport implements FromCollection, WithHeadings, WithMapping, WithS
         // Fill array with 35 empty strings to represent columns A to AI
         $row = array_fill(0, 35, '');
 
-        $row[0] = now()->format('Y/m'); // A: Mes de Reporte
-        $row[1] = '';             // B: Código Entidad
-        $row[2] = $contract->number_pagare; // C: Número del Crédito
-        $row[3] = '1';                // D: Tipo Documento
-        $row[4] = $contract->document; // E: Nº Documento Identidad
-        $row[5] = '';                 // F: Razón Social
-        $row[6] = $paterno;           // G: Apellido Paterno
-        $row[7] = $materno;           // H: Apellido Materno
-        $row[8] = $nombres;           // I: Nombres
-        $row[9] = '1';                // J: Tipo Persona
-        $row[10] = '5';               // K: Tipo de Crédito
+        $row[0]  = now()->format('Y/m');           // A: Mes de Reporte
+        $row[1]  = '';                              // B: Código Entidad
+        $row[2]  = $contract->id;                   // C: Número del Crédito (número de contrato del PDF)
+        $row[3]  = '1';                             // D: Tipo Documento
+        $row[4]  = $contract->document;             // E: Nº Documento Identidad
+        $row[5]  = '';                              // F: Razón Social
+        $row[6]  = $paterno;                        // G: Apellido Paterno
+        $row[7]  = $materno;                        // H: Apellido Materno
+        $row[8]  = $nombres;                        // I: Nombres
+        $row[9]  = '1';                             // J: Tipo Persona
+        $row[10] = '5';                             // K: Tipo de Crédito
 
-        $row[14] = $vencida > 0 ? number_format($vencida, 1, '.', '') : ''; // O: MN Deuda Directa Vencida > 30
+        $row[11] = $vigente > 0      ? number_format($vigente,      1, '.', '') : ''; // L: MN Deuda Directa Vigente
+        $row[13] = $vencidaLt30 > 0  ? number_format($vencidaLt30,  1, '.', '') : ''; // N: MN Deuda Directa Vencida ≤ 30
+        $row[14] = $vencidaGt30 > 0  ? number_format($vencidaGt30,  1, '.', '') : ''; // O: MN Deuda Directa Vencida > 30
 
-        $row[27] = $rating;           // AB: Calificación SBS
-        $row[28] = (int)$maxDelay;    // AC: Número días vencidos o morosos
+        $row[27] = $rating;                         // AB: Calificación SBS
+        $row[28] = (int) $maxDelay;                 // AC: Número días vencidos o morosos
 
         return $row;
     }
