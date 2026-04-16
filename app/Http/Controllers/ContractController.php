@@ -129,6 +129,47 @@ class ContractController extends Controller
             return $request->civil_status == 'Casado';
         });
 
+        $validator->after(function ($validator) use ($request) {
+            $user = auth()->user();
+
+            if (!$user || !$user->hasRole('seller')) {
+                return;
+            }
+
+            // Evitar contratos paralelos (activos y no pagados) para sellers
+            if ($request->client_type === 'Personal' && $request->document) {
+                $exists = Contract::active()
+                    ->where('paid', 0)
+                    ->where('document', $request->document)
+                    ->exists();
+
+                if ($exists) {
+                    $validator->errors()->add('document', 'Este cliente ya tiene un contrato activo. No se permite crear contratos paralelos.');
+                }
+            }
+
+            if ($request->client_type === 'Grupo' && is_array($request->documents) && count($request->documents) > 0) {
+                $docs = array_values(array_filter($request->documents));
+
+                if (count($docs) === 0) {
+                    return;
+                }
+
+                $query = Contract::active()->where('paid', 0)->where(function ($q) use ($docs) {
+                    $q->whereIn('document', $docs);
+
+                    foreach ($docs as $doc) {
+                        // people es un JSON guardado como texto
+                        $q->orWhere('people', 'like', '%"document":"' . $doc . '"%');
+                    }
+                });
+
+                if ($query->exists()) {
+                    $validator->errors()->add('documents', 'Uno o más integrantes ya tienen un contrato activo. No se permite crear contratos paralelos.');
+                }
+            }
+        });
+
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,

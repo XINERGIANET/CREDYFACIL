@@ -75,8 +75,10 @@
                         <th>Asesor C.</th>
                         <th>Monto solicitado</th>
                         <th>Cuotas</th>
+                        <th>% de interés</th>
                         <th>interés</th>
                         <th>Monto a pagar</th>
+                        <th>Monto seguro</th>
                         <th>Fecha de prestamo</th>
                         <th>Estado</th>
                         <th>Aprob.</th>
@@ -91,10 +93,12 @@
                                     {{ $contract->client_type == 'Personal' ? $contract->name : $contract->group_name }}
                                 </td>
                                 <td>{{ optional($contract)->seller->name }}</td>
-                                <td>{{ $contract->requested_amount }}</td>
+                                <td>S/ {{ number_format($contract->requested_amount, 1) }}</td>
                                 <td>{{ $contract->quotas_number }}</td>
-                                <td>{{ $contract->interest }}</td>
-                                <td>{{ $contract->payable_amount }}</td>
+                                <td>{{ $contract->percentage }}%</td>
+                                <td>S/ {{ number_format($contract->interest, 1) }}</td>
+                                <td>S/ {{ number_format($contract->payable_amount, 1) }}</td>
+                                <td>S/ {{ number_format($contract->insurance_amount, 1) }}</td>
                                 <td>{{ $contract->date->format('d/m/Y') }}</td>
                                 <td>
                                     @if ($contract->paid)
@@ -140,7 +144,7 @@
                         @endforeach
                     @else
                         <tr>
-                            <td colspan="9" align="center">No se han encontrado resultados</td>
+                            <td colspan="12" align="center">No se han encontrado resultados</td>
                         </tr>
                     @endif
                 </tbody>
