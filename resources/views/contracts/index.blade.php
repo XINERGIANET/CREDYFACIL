@@ -80,6 +80,7 @@
                         <th>Monto a pagar</th>
                         <th>Monto seguro</th>
                         <th>Fecha de prestamo</th>
+                        <th>Tipo de cuotas</th>
                         <th>Estado</th>
                         <th>Aprob.</th>
                         <th>Acción</th>
@@ -100,6 +101,9 @@
                                 <td>S/ {{ number_format($contract->payable_amount, 1) }}</td>
                                 <td>S/ {{ number_format($contract->insurance_amount, 1) }}</td>
                                 <td>{{ $contract->date->format('d/m/Y') }}</td>
+                                <td>
+                                   {{ $contract->quota_type }}
+                                </td>
                                 <td>
                                     @if ($contract->paid)
                                         <span class="badge bg-success"></span>

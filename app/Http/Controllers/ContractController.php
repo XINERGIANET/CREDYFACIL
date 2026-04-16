@@ -37,6 +37,32 @@ class ContractController extends Controller
         })->when($request->end_date, function ($query, $end_date) {
             return $query->whereDate('date', '<=', $end_date);
         })->latest('date')->latest('id')->paginate(20);
+
+        // Mapear el tipo de cuota numérico a texto legible
+        $quotaTypeMap = [1 => 'Semanal', 2 => 'Catorcenal', 4 => 'Mensual'];
+        foreach ($contracts as $contract) {
+            if (!is_null($contract->type_quota) && isset($quotaTypeMap[(int) $contract->type_quota])) {
+                $contract->quota_type = $quotaTypeMap[(int) $contract->type_quota];
+            } else {
+                // Fallback para contratos viejos: calcular por diferencia de fechas entre las 2 primeras cuotas
+                $firstTwo = $contract->quotas()->orderBy('date')->limit(2)->get();
+                if ($firstTwo->count() > 1) {
+                    $daysDiff = Carbon::parse($firstTwo[0]->date)->diffInDays(Carbon::parse($firstTwo[1]->date));
+                    if ($daysDiff >= 25 && $daysDiff <= 35) {
+                        $contract->quota_type = 'Mensual';
+                    } elseif ($daysDiff >= 12 && $daysDiff <= 16) {
+                        $contract->quota_type = 'Catorcenal';
+                    } elseif ($daysDiff >= 5 && $daysDiff <= 9) {
+                        $contract->quota_type = 'Semanal';
+                    } else {
+                        $contract->quota_type = 'No definido';
+                    }
+                } else {
+                    $contract->quota_type = 'No definido';
+                }
+            }
+        }
+
         $sellers = User::seller()->where('state', 0)->active()->orderBy('name', 'asc')->get();
         $departments = Department::orderBy('name', 'asc')->get();
         return view('contracts.index', compact('contracts', 'sellers', 'departments'));
