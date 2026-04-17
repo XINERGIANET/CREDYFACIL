@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Contract;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -43,6 +44,28 @@ class ContractsExport implements FromCollection, WithHeadings, WithMapping, With
             ->get();
     }
 
+    private function quotaType(Contract $contract): string
+    {
+        $map = [1 => 'Semanal', 2 => 'Catorcenal', 4 => 'Mensual'];
+
+        if (!is_null($contract->type_quota) && isset($map[(int) $contract->type_quota])) {
+            return $map[(int) $contract->type_quota];
+        }
+
+        // Fallback para contratos viejos: calcular por diferencia entre las 2 primeras cuotas
+        $firstTwo = $contract->quotas()->orderBy('date')->limit(2)->get();
+
+        if ($firstTwo->count() > 1) {
+            $diff = Carbon::parse($firstTwo[0]->date)->diffInDays(Carbon::parse($firstTwo[1]->date));
+
+            if ($diff >= 25 && $diff <= 35) return 'Mensual';
+            if ($diff >= 12 && $diff <= 16) return 'Catorcenal';
+            if ($diff >= 5  && $diff <= 9)  return 'Semanal';
+        }
+
+        return 'No definido';
+    }
+
     public function map($contract): array
     {
         $cliente = $contract->client_type == 'Personal' ? $contract->name : $contract->group_name;
@@ -50,6 +73,7 @@ class ContractsExport implements FromCollection, WithHeadings, WithMapping, With
         return [
             $cliente,
             optional($contract->seller)->name,
+            $this->quotaType($contract),
             $contract->requested_amount,
             $contract->quotas_number,
             $contract->percentage . '%',
@@ -67,6 +91,7 @@ class ContractsExport implements FromCollection, WithHeadings, WithMapping, With
         return [
             'Cliente/Grupo',
             'Asesor comercial',
+            'Tipo de cuota',
             'Monto solicitado',
             'Cuotas',
             '% de interés',
@@ -86,4 +111,3 @@ class ContractsExport implements FromCollection, WithHeadings, WithMapping, With
         ];
     }
 }
-
