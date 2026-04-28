@@ -25,16 +25,16 @@
                 <i class="ti ti-file-export icon"></i> Excel
             </button>
         </div>
-        @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
-            <div class="card-body border-bottom">
-                <form>
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label class="form-label">Cliente</label>
-                                <input type="text" class="form-control" name="name" value="{{ request()->name }}">
-                            </div>
+        <div class="card-body border-bottom">
+            <form>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">Cliente</label>
+                            <input type="text" class="form-control" name="name" value="{{ request()->name }}">
                         </div>
+                    </div>
+                    @if (!auth()->user()->hasRole('seller'))
                         <div class="col-md-3">
                             <div class="mb-3">
                                 <label class="form-label">Asesor comercial</label>
@@ -47,26 +47,25 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label class="form-label">Inicio del préstamo</label>
-                                <input type="date" class="form-control" name="start_date"
-                                    value="{{ request()->start_date }}">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label class="form-label">Fin del préstamo</label>
-                                <input type="date" class="form-control" name="end_date"
-                                    value="{{ request()->end_date }}">
-                            </div>
+                    @endif
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">Inicio del préstamo</label>
+                            <input type="date" class="form-control" name="start_date"
+                                value="{{ request()->start_date }}">
                         </div>
                     </div>
-                    <button class="btn btn-primary">Filtrar</button>
-                    <a href="{{ route('contracts.index') }}" class="btn btn-danger">Limpiar</a>
-                </form>
-            </div>
-        @endif
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">Fin del préstamo</label>
+                            <input type="date" class="form-control" name="end_date" value="{{ request()->end_date }}">
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary">Filtrar</button>
+                <a href="{{ route('contracts.index') }}" class="btn btn-danger">Limpiar</a>
+            </form>
+        </div>
         <div class="table-responsive">
             <table class="table card-table table-vcenter">
                 <thead>
@@ -102,7 +101,7 @@
                                 <td>S/ {{ number_format($contract->insurance_amount, 1) }}</td>
                                 <td>{{ $contract->date->format('d/m/Y') }}</td>
                                 <td>
-                                   {{ $contract->quota_type }}
+                                    {{ $contract->quota_type }}
                                 </td>
                                 <td>
                                     @if ($contract->paid)
@@ -1124,7 +1123,7 @@
             $newRow.find('.ts-wrapper').remove();
             $newRow.find(
                 'input[name="documents[]"], input[name="names[]"], input[name="addresses[]"], input[name="quotas[]"]'
-                ).each(function() {
+            ).each(function() {
                 $(this).val('').removeAttr('readonly');
             });
 
