@@ -66,7 +66,7 @@ class Contract extends Model
     public function type()
     {
         if ($this->client_type == 'Personal') {
-            $contracts = Contract::where('document', $this->document)->count();
+            $contracts = Contract::where('document', $this->document)->active()->count();
 
             if ($contracts > 1) {
                 return 'Recurrente';

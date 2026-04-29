@@ -11,6 +11,13 @@
 </nav>
 
 <div class="card">
+	@if (auth()->user()->hasRole('admin'))
+	<div class="card-header d-flex flex-wrap align-items-center gap-2">
+		<a class="btn btn-success" href="{{ route('clients.excel', request()->all()) }}" target="_blank">
+			<i class="ti ti-file-export icon"></i> Excel
+		</a>
+	</div>
+	@endif
 	@if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
 	<div class="card-body border-bottom">
 		<form>

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Exports\ClientsExport;
 use App\Models\Contract;
 use App\Models\Quota;
 use App\Models\User;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ClientController extends Controller
 {
@@ -25,6 +27,13 @@ class ClientController extends Controller
         })->latest('date')->latest('id')->groupBy('document')->groupBy('group_name')->paginate(20);
         
         return view('clients.index', compact('clients', 'sellers'));
+    }
+
+    public function excel(Request $request)
+    {
+        $name = 'Clientes_' . now()->format('d_m_Y') . '.xlsx';
+
+        return Excel::download(new ClientsExport, $name);
     }
 
     public function check(Request $request){

@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
 	Route::get('clients/details', [ClientController::class, 'details'])->name('clients.details');
 	Route::get('clients/check', [ClientController::class, 'check'])->name('clients.check');
 	Route::get('clients/api', [ClientController::class, 'api'])->name('clients.api');
+	Route::get('clients/excel', [ClientController::class, 'excel'])->name('clients.excel');
 	Route::get('clients', [ClientController::class, 'index'])->name('clients.index');
 
 	Route::get('contracts/api', [ContractController::class, 'api'])->name('contracts.api');
