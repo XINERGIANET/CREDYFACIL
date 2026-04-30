@@ -41,7 +41,7 @@ class PaymentController extends Controller
             return $query->whereDate('date', '>=', $start_date);
         })->when($request->end_date, function($query, $end_date){
             return $query->whereDate('date', '<=', $end_date);
-        })->latest('date')->latest('id');
+        })->with(['quota.contract.seller', 'payment_method'])->latest('date')->latest('id');
 
         $total = $payments->sum('amount');
 

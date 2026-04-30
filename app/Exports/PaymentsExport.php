@@ -46,6 +46,7 @@ class PaymentsExport implements FromCollection, WithHeadings, WithMapping, WithS
             ->when($request->end_date, function ($query, $end_date) {
                 return $query->whereDate('date', '<=', $end_date);
             })
+            ->with(['quota.contract.seller', 'payment_method'])
             ->latest('date')
             ->latest('id')
             ->get();
@@ -54,11 +55,15 @@ class PaymentsExport implements FromCollection, WithHeadings, WithMapping, WithS
     public function map($payment): array
     {
         $contract = optional(optional($payment->quota)->contract);
+        $b = $payment->capitalInterestInsuranceBreakdown();
 
         return [
             $contract->client(),
             optional($contract->seller)->name,
             optional($payment->quota)->number,
+            $b['capital'],
+            $b['interest'],
+            $b['insurance'],
             $payment->amount,
             optional($payment->payment_method)->name,
             optional($payment->date)->format('d/m/Y'),
@@ -72,6 +77,9 @@ class PaymentsExport implements FromCollection, WithHeadings, WithMapping, WithS
             'Cliente',
             'Asesor comercial',
             'Número de cuota',
+            'Capital',
+            'Interés',
+            'Seguro',
             'Monto',
             'Método de pago',
             'Fecha de pago',

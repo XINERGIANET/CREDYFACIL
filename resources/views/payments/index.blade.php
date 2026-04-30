@@ -93,7 +93,10 @@
                     <tr>
                         <th>Cliente</th>
                         <th>Número de cuota</th>
-                        <th>Monto</th>
+                        <th class="text-end">Capital</th>
+                        <th class="text-end">Interés</th>
+                        <th class="text-end">Seguro</th>
+                        <th class="text-end">Monto</th>
                         <th>Método de pago</th>
                         <th>Fecha de pago</th>
                         <th>Días de mora</th>
@@ -105,13 +108,17 @@
                         @foreach ($payments as $payment)
                             @php
                                 $contract = optional(optional($payment->quota)->contract);
+                                $breakdown = $payment->capitalInterestInsuranceBreakdown();
                             @endphp
                             <tr>
                                 <td>
                                     {{ $contract->client() . ' - S/' . number_format($contract->requested_amount, 2) . ' - ' . optional($contract->date)->format('d/m/Y') }}
                                 </td>
                                 <td>{{ optional($payment->quota)->number }}</td>
-                                <td>{{ $payment->amount }}</td>
+                                <td class="text-end">S/{{ number_format($breakdown['capital'], 2) }}</td>
+                                <td class="text-end">S/{{ number_format($breakdown['interest'], 2) }}</td>
+                                <td class="text-end">S/{{ number_format($breakdown['insurance'], 2) }}</td>
+                                <td class="text-end">S/{{ number_format($payment->amount, 2) }}</td>
                                 <td>{{ optional($payment->payment_method)->name }}</td>
                                 <td>{{ $payment->date->format('d/m/Y') }}</td>
                                 <td>{{ $payment->due_days }}</td>
@@ -149,7 +156,7 @@
                         @endforeach
                     @else
                         <tr>
-                            <td colspan="8" align="center">No se han encontrado resultados</td>
+                            <td colspan="10" align="center">No se han encontrado resultados</td>
                         </tr>
                     @endif
                 </tbody>

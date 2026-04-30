@@ -48,4 +48,33 @@ class Payment extends Model
 
         return $html;
     }
+
+    /**
+     * Reparte el monto del pago entre capital, interés y seguro según la composición del contrato.
+     *
+     * @return array{capital: float, interest: float, insurance: float}
+     */
+    public function capitalInterestInsuranceBreakdown(): array
+    {
+        $contract = optional(optional($this->quota)->contract);
+        $payable = (float) ($contract->payable_amount ?? 0);
+        $amount = (float) $this->amount;
+
+        if (!$contract || $payable <= 0 || $amount <= 0) {
+            return ['capital' => 0.0, 'interest' => 0.0, 'insurance' => 0.0];
+        }
+
+        $requested = (float) ($contract->requested_amount ?? 0);
+        $interest = (float) ($contract->interest ?? 0);
+
+        $capital = round($amount * $requested / $payable, 2);
+        $interestPart = round($amount * $interest / $payable, 2);
+        $insurancePart = round($amount - $capital - $interestPart, 2);
+
+        return [
+            'capital' => $capital,
+            'interest' => $interestPart,
+            'insurance' => $insurancePart,
+        ];
+    }
 }
