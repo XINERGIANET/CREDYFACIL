@@ -20,7 +20,18 @@ class SentinelExport implements FromCollection, WithHeadings, WithMapping, WithS
      */
     public function collection()
     {
-        return Contract::active()->where('approved', 1)->with(['quotas', 'district.province.department'])->get();
+        return Contract::active()
+            ->where('approved', 1)
+            ->whereHas('quotas', function ($query) {
+                $query->where('paid', 0);
+            })
+            ->with([
+                'quotas' => function ($query) {
+                    $query->where('paid', 0)->orderBy('date');
+                },
+                'district.province.department'
+            ])
+            ->get();
     }
 
     public function map($contract): array
@@ -31,23 +42,25 @@ class SentinelExport implements FromCollection, WithHeadings, WithMapping, WithS
         $materno = $nameParts[1] ?? '';
         $nombres = implode(' ', array_slice($nameParts, 2));
 
-        $unpaid = $contract->quotas->where('paid', 0);
-
         $vigente   = 0;
         $vencidaLt30 = 0;
         $vencidaGt30 = 0;
         $maxDelay  = 0;
+        $consultationDate = today();
 
-        foreach ($unpaid as $quota) {
-            $days = (int) Carbon::parse($quota->date)->diffInDays(now(), false);
+        foreach ($contract->quotas as $quota) {
+            $quotaDate = Carbon::parse($quota->date)->startOfDay();
+            $days = $quotaDate->lt($consultationDate)
+                ? $quotaDate->diffInDays($consultationDate)
+                : 0;
 
-            if ($days <= 0) {
+            if ($days === 0) {
                 // Cuota aún no vencida → vigente
-                $vigente += $quota->debt;
+                $vigente += (float) $quota->debt;
             } elseif ($days <= 30) {
-                $vencidaLt30 += $quota->debt;
+                $vencidaLt30 += (float) $quota->debt;
             } else {
-                $vencidaGt30 += $quota->debt;
+                $vencidaGt30 += (float) $quota->debt;
             }
 
             if ($days > $maxDelay) {
