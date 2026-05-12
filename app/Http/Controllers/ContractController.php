@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Exports\ContractsExport;
- use App\Exports\EndingContractsExport;
+use App\Exports\EndingContractsExport;
 use App\Exports\SentinelExport;
 use App\Models\Config;
 use Maatwebsite\Excel\Facades\Excel;
@@ -84,7 +84,7 @@ class ContractController extends Controller
             });
         })->when($request->seller_id, function ($query, $seller_id) {
             return $query->where('seller_id', $seller_id);
-        })->whereDate('last_payment_date', '>=', $start_date)->whereDate('last_payment_date', '<=', $end_date)
+        })->where('paid', 0)->whereDate('last_payment_date', '>=', $start_date)->whereDate('last_payment_date', '<=', $end_date)
             ->oldest('last_payment_date');
 
         $requested_amount = $contracts->sum('requested_amount');
@@ -388,19 +388,19 @@ class ContractController extends Controller
     public function update(Request $request, Contract $contract)
     {
         $validator = Validator::make($request->all(), [
-            'name'      => 'nullable|string',
+            'name' => 'nullable|string',
             'seller_id' => 'required|exists:users,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
-                'error'  => $validator->errors()->first(),
+                'error' => $validator->errors()->first(),
             ]);
         }
 
         $contract->update([
-            'name'      => $request->name ?? $contract->name,
+            'name' => $request->name ?? $contract->name,
             'seller_id' => $request->seller_id,
         ]);
 
@@ -489,16 +489,18 @@ class ContractController extends Controller
             ->whereDoesntHave('expenses')
             ->orderBy('name')->orderBy('group_name')->orderBy('date')->get();
 
-        return response()->json(['items' => $contracts->map(function ($contract) {
-            return [
-                'id' => $contract->id,
-                'client_type' => $contract->client_type,
-                'name' => $contract->name,
-                'group_name' => $contract->group_name,
-                'requested_amount' => $contract->requested_amount,
-                'date' => $contract->date->format('d/m/Y'),
-            ];
-        })]);
+        return response()->json([
+            'items' => $contracts->map(function ($contract) {
+                return [
+                    'id' => $contract->id,
+                    'client_type' => $contract->client_type,
+                    'name' => $contract->name,
+                    'group_name' => $contract->group_name,
+                    'requested_amount' => $contract->requested_amount,
+                    'date' => $contract->date->format('d/m/Y'),
+                ];
+            })
+        ]);
     }
 
     /* public function pdf(Request $request, Contract $contract)

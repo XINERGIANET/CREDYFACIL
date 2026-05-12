@@ -15,29 +15,29 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class ChargesExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
     public function collection()
     {
         $user = auth()->user();
         $request = request();
-        $quotas = Quota::active()->when($user->hasRole('seller'), function($query) use($user){
-            return $query->whereHas('contract', function($query) use($user){
+        $quotas = Quota::active()->when($user->hasRole('seller'), function ($query) use ($user) {
+            return $query->whereHas('contract', function ($query) use ($user) {
                 return $query->where('seller_id', $user->id);
             });
-        })->when($request->name, function($query, $name){
-            return $query->whereHas('contract', function($query) use($name){
-                return $query->where(function($query) use ($name){
-                    return $query->where('name', 'like', '%'.$name.'%')->orWhere('group_name', 'like', '%'.$name.'%');
+        })->when($request->name, function ($query, $name) {
+            return $query->whereHas('contract', function ($query) use ($name) {
+                return $query->where(function ($query) use ($name) {
+                    return $query->where('name', 'like', '%' . $name . '%')->orWhere('group_name', 'like', '%' . $name . '%');
                 });
             });
-        })->when($request->seller_id, function($query, $seller_id){
-            return $query->whereHas('contract', function($query) use($seller_id){
+        })->when($request->seller_id, function ($query, $seller_id) {
+            return $query->whereHas('contract', function ($query) use ($seller_id) {
                 return $query->where('seller_id', $seller_id);
             });
-        })->when($request->start_date, function($query, $start_date){
+        })->when($request->start_date, function ($query, $start_date) {
             return $query->whereDate('date', '>=', $start_date);
-        })->when($request->end_date, function($query, $end_date){
+        })->when($request->end_date, function ($query, $end_date) {
             return $query->whereDate('date', '<=', $end_date);
         })->where('paid', 0)->orderBy('date')->get();
 
@@ -50,6 +50,7 @@ class ChargesExport implements FromCollection, WithHeadings, WithMapping, WithSt
         return [
             optional($quota->contract)->client(),
             $quota->number,
+            optional($quota->contract)->quotas_number,
             $quota->amount,
             $quota->debt,
             $quota->date->format('d/m/Y')
@@ -61,6 +62,7 @@ class ChargesExport implements FromCollection, WithHeadings, WithMapping, WithSt
         return [
             'Cliente',
             'Número de cuota',
+            'Total cuotas',
             'Monto',
             'Saldo',
             'Fecha de pago'

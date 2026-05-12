@@ -64,6 +64,7 @@
 					<tr>
 						<th>Cliente</th>
 						<th>Número de cuota</th>
+						<th>Total cuotas</th>
 						<th>Monto</th>
 						<th>Saldo</th>
 						<th>Fecha de pago</th>
@@ -76,17 +77,15 @@
 							<tr>
 								<td>{{ optional($quota->contract)->client() }}</td>
 								<td>{{ $quota->number }}</td>
+								<td>{{ optional($quota->contract)->quotas_number }}</td>
 								<td>{{ $quota->amount }}</td>
 								<td>{{ $quota->debt }}</td>
 								<td>{{ $quota->date->format('d/m/Y') }}</td>
 								<td>
 									@if($quota->paid == 0)
-										<button class="btn btn-primary btn-pay" 
-											data-contract-id="{{ $quota->contract_id }}"
-											data-quota-id="{{ $quota->id }}"
-											data-amount="{{ $quota->debt }}"
-											data-client="{{ $quota->contract->client() }}"
-											data-people="{{ $quota->contract->people }}"
+										<button class="btn btn-primary btn-pay" data-contract-id="{{ $quota->contract_id }}"
+											data-quota-id="{{ $quota->id }}" data-amount="{{ $quota->debt }}"
+											data-client="{{ $quota->contract->client() }}" data-people="{{ $quota->contract->people }}"
 											title="Cobrar">
 											<i class="ti ti-cash"></i>
 										</button>
@@ -148,7 +147,8 @@
 								<div class="mb-3">
 									<label class="form-label required">Fecha</label>
 									@if(auth()->user()->hasRole('admin'))
-										<input type="date" class="form-control" name="date" id="pay_date" value="{{ now()->format('Y-m-d') }}">
+										<input type="date" class="form-control" name="date" id="pay_date"
+											value="{{ now()->format('Y-m-d') }}">
 									@else
 										<input type="text" class="form-control" value="{{ now()->format('d/m/Y') }}" disabled>
 										<input type="hidden" name="date" id="pay_date" value="{{ now()->format('Y-m-d') }}">
@@ -158,7 +158,8 @@
 							<div class="col-lg-6">
 								<div class="mb-3">
 									<label class="form-label">Imagen</label>
-									<input type="file" class="form-control" name="image" id="pay_image" accept=".jpg,.jpeg,.png,.webp">
+									<input type="file" class="form-control" name="image" id="pay_image"
+										accept=".jpg,.jpeg,.png,.webp">
 								</div>
 							</div>
 						</div>
@@ -178,70 +179,70 @@
 @endsection
 
 @section('scripts')
-<script>
-	$(document).on('click', '.btn-pay', function() {
-		var btn = $(this);
-		$('#pay_contract_id').val(btn.data('contract-id'));
-		$('#pay_quota_id').val(btn.data('quota-id'));
-		$('#pay_client_name').val(btn.data('client'));
-		$('#pay_amount').val(btn.data('amount'));
-		
-		var people = btn.data('people');
-		var html = '';
-		if(people && people != 'null'){
-			try {
-				var peopleArr = typeof people === 'string' ? JSON.parse(people) : people;
-				if(peopleArr.length > 0){
-					peopleArr.forEach(function(client){
-						html += `
-							<div class="form-check">
-								<input class="form-check-input" type="checkbox" name="people[]" value="${client.document}">
-								<span class="form-check-label">${client.name}</span>
-							</div>
-						`;
-					});
-					$('#divPeople').html(html);
-					$('#divPeopleContainer').show();
-				} else {
+	<script>
+		$(document).on('click', '.btn-pay', function () {
+			var btn = $(this);
+			$('#pay_contract_id').val(btn.data('contract-id'));
+			$('#pay_quota_id').val(btn.data('quota-id'));
+			$('#pay_client_name').val(btn.data('client'));
+			$('#pay_amount').val(btn.data('amount'));
+
+			var people = btn.data('people');
+			var html = '';
+			if (people && people != 'null') {
+				try {
+					var peopleArr = typeof people === 'string' ? JSON.parse(people) : people;
+					if (peopleArr.length > 0) {
+						peopleArr.forEach(function (client) {
+							html += `
+								<div class="form-check">
+									<input class="form-check-input" type="checkbox" name="people[]" value="${client.document}">
+									<span class="form-check-label">${client.name}</span>
+								</div>
+							`;
+						});
+						$('#divPeople').html(html);
+						$('#divPeopleContainer').show();
+					} else {
+						$('#divPeopleContainer').hide();
+					}
+				} catch (e) {
 					$('#divPeopleContainer').hide();
 				}
-			} catch(e) {
+			} else {
 				$('#divPeopleContainer').hide();
 			}
-		} else {
-			$('#divPeopleContainer').hide();
-		}
-		
-		$('#payModal').modal('show');
-	});
 
-	$('#payForm').submit(function(e) {
-		e.preventDefault();
-		$('#btn-save-pay').prop('disabled', true);
+			$('#payModal').modal('show');
+		});
 
-		var fd = new FormData(this);
+		$('#payForm').submit(function (e) {
+			e.preventDefault();
+			$('#btn-save-pay').prop('disabled', true);
 
-		$.ajax({
-			url: '{{ route('payments.store') }}',
-			method: 'POST',
-			processData: false,
-			contentType: false,
-			data: fd,
-			success: function(data) {
-				if (data.status) {
-					$('#payModal').modal('hide');
-					ToastMessage.fire({ text: 'Pago registrado correctamente' })
-						.then(() => location.reload());
-				} else {
-					ToastError.fire({ text: data.error ? data.error : 'Ocurrió un error' });
+			var fd = new FormData(this);
+
+			$.ajax({
+				url: '{{ route('payments.store') }}',
+				method: 'POST',
+				processData: false,
+				contentType: false,
+				data: fd,
+				success: function (data) {
+					if (data.status) {
+						$('#payModal').modal('hide');
+						ToastMessage.fire({ text: 'Pago registrado correctamente' })
+							.then(() => location.reload());
+					} else {
+						ToastError.fire({ text: data.error ? data.error : 'Ocurrió un error' });
+						$('#btn-save-pay').prop('disabled', false);
+					}
+				},
+				error: function (err) {
+					ToastError.fire({ text: 'Ocurrió un error al procesar el pago' });
 					$('#btn-save-pay').prop('disabled', false);
 				}
-			},
-			error: function(err) {
-				ToastError.fire({ text: 'Ocurrió un error al procesar el pago' });
-				$('#btn-save-pay').prop('disabled', false);
-			}
+			});
 		});
-	});
-</script>
+	</script>
 @endsection

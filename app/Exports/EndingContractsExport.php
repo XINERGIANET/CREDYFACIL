@@ -15,26 +15,26 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class EndingContractsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
     public function collection()
     {
         $request = request();
         $user = auth()->user();
-        
+
         $start_date = $request->start_date ? $request->start_date : now();
         $end_date = $request->end_date ? $request->end_date : now();
-        
-        $contracts = Contract::active()->when($user->hasRole('seller'), function($query) use($user){
+
+        $contracts = Contract::active()->when($user->hasRole('seller'), function ($query) use ($user) {
             return $query->where('seller_id', $user->id);
-        })->when($request->name, function($query, $name){
-            return $query->where(function($query) use ($name){
-                return $query->where('name', 'like', '%'.$name.'%')->orWhere('group_name', 'like', '%'.$name.'%');
+        })->when($request->name, function ($query, $name) {
+            return $query->where(function ($query) use ($name) {
+                return $query->where('name', 'like', '%' . $name . '%')->orWhere('group_name', 'like', '%' . $name . '%');
             });
-        })->when($request->seller_id, function($query, $seller_id){
+        })->when($request->seller_id, function ($query, $seller_id) {
             return $query->where('seller_id', $seller_id);
-        })->whereDate('last_payment_date', '>=', $start_date)->whereDate('last_payment_date', '<=', $end_date)
-        ->oldest('last_payment_date')->get();
+        })->where('paid', 0)->whereDate('last_payment_date', '>=', $start_date)->whereDate('last_payment_date', '<=', $end_date)
+            ->oldest('last_payment_date')->get();
 
         return $contracts;
 
@@ -52,7 +52,8 @@ class EndingContractsExport implements FromCollection, WithHeadings, WithMapping
             $contract->payable_amount,
             $contract->insurance_amount,
             $contract->date->format('d/m/Y'),
-            $contract->last_payment_date->format('d/m/Y')
+            $contract->last_payment_date->format('d/m/Y'),
+            $contract->paid ? 'Pagado' : 'Pendiente'
         ];
     }
 
@@ -69,6 +70,7 @@ class EndingContractsExport implements FromCollection, WithHeadings, WithMapping
             'Monto seguro',
             'Fecha de prestamo',
             'Fecha de última cuota',
+            'Estado',
         ];
     }
 
