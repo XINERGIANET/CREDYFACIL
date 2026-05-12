@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Carbon\Carbon;
 use App\Models\Quota;
 use App\Models\Payment;
 use App\Models\Expense;
@@ -14,9 +15,19 @@ use App\Models\Transfer;
 use App\Models\Department;
 use App\Models\Province;
 use App\Models\District;
+use App\Exports\PortfolioDailyReportExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class WebController extends Controller
 {
+    public function portfolioDailyExcel(Request $request)
+    {
+        $date = $request->date ? $request->date : today()->format('Y-m-d');
+        $name = 'Reporte_Cartera_Credyfacil_' . Carbon::parse($date)->format('d_m_Y') . '.xlsx';
+
+        return Excel::download(new PortfolioDailyReportExport($date), $name);
+    }
+
     public function index(Request $request){
         $user = auth()->user();
 

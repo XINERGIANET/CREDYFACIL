@@ -36,11 +36,11 @@ class SentinelExport implements FromCollection, WithHeadings, WithMapping, WithS
 
     public function map($contract): array
     {
-        // Split name into Paterno, Materno, Nombres
+        // El nombre se guarda como: Nombres ApellidoPaterno ApellidoMaterno.
         $nameParts = explode(' ', trim($contract->name));
-        $paterno = $nameParts[0] ?? '';
-        $materno = $nameParts[1] ?? '';
-        $nombres = implode(' ', array_slice($nameParts, 2));
+        $materno = count($nameParts) > 1 ? array_pop($nameParts) : '';
+        $paterno = count($nameParts) > 1 ? array_pop($nameParts) : '';
+        $nombres = implode(' ', $nameParts);
 
         $vigente   = 0;
         $vencidaLt30 = 0;

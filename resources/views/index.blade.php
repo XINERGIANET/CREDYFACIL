@@ -4,6 +4,11 @@
 
 @section('content')
 @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
+<div class="d-flex justify-content-end mb-3">
+	<a class="btn btn-success" href="{{ route('reports.portfolio-daily.excel', ['date' => request()->end_date_2 ?: now()->format('Y-m-d')]) }}" target="_blank">
+		<i class="ti ti-file-spreadsheet icon"></i> Reporte cartera al dia
+	</a>
+</div>
 <div class="row">
 	<div class="col-md-9">
 		<form class="mb-4">
