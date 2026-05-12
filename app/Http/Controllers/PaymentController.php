@@ -100,7 +100,7 @@ class PaymentController extends Controller
             return $query->whereRaw('DATEDIFF(?, date) >= ?', [now()->format('Y-m-d'), $from_days]);
         })->when($request->to_days, function($query, $to_days){
             return $query->whereRaw('DATEDIFF(?, date) <= ?', [now()->format('Y-m-d'), $to_days]);
-        })->whereDate('date', '<', $date)->where('paid', 0)->paginate(20);
+        })->whereDate('date', '<', $date)->where('paid', 0)->with('contract.seller')->paginate(20);
 
         $payment_methods = PaymentMethod::active()->get();
         return view('payments.dues', compact('quotas', 'sellers', 'payment_methods'));

@@ -37,7 +37,7 @@ class DuesExport implements FromCollection, WithHeadings, WithMapping, WithStyle
             return $query->whereRaw('DATEDIFF(?, date) >= ?', [now()->format('Y-m-d'), $from_days]);
         })->when($request->to_days, function($query, $to_days){
             return $query->whereRaw('DATEDIFF(?, date) <= ?', [now()->format('Y-m-d'), $to_days]);
-        })->whereDate('date', '<', $date)->where('paid', 0)->get();
+        })->whereDate('date', '<', $date)->where('paid', 0)->with('contract.seller')->get();
 
         return $quotas;
     }
@@ -46,6 +46,7 @@ class DuesExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     {
         return [
             optional($quota->contract)->client(),
+            optional(optional($quota->contract)->seller)->name,
             $quota->number,
             $quota->amount,
             $quota->debt,
@@ -58,6 +59,7 @@ class DuesExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     {
         return [
             'Cliente',
+            'Asesor',
             'Número de cuota',
             'Monto',
             'Saldo',

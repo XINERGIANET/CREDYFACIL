@@ -62,6 +62,7 @@
 			<thead>
 				<tr>
 					<th>Cliente</th>
+					<th>Asesor</th>
 					<th>Número de cuota</th>
 					<th>Monto</th>
 					<th>Saldo</th>
@@ -75,6 +76,7 @@
 				@foreach($quotas as $quota)
 				<tr>
 					<td>{{ optional($quota->contract)->client() }}</td>
+					<td>{{ optional($quota->contract->seller)->name }}</td>
 					<td>{{ $quota->number }}</td>
 					<td>{{ $quota->amount }}</td>
 					<td>{{ $quota->debt }}</td>
@@ -94,7 +96,7 @@
 				@endforeach
 				@else
 				<tr>
-					<td colspan="5" align="center">No se han encontrado resultados</td>
+					<td colspan="8" align="center">No se han encontrado resultados</td>
 				</tr>
 				@endif
 			</tbody>
