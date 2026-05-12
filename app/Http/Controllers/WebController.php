@@ -15,6 +15,7 @@ use App\Models\Transfer;
 use App\Models\Department;
 use App\Models\Province;
 use App\Models\District;
+use App\Models\Goal;
 use App\Exports\PortfolioDailyReportExport;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -22,10 +23,20 @@ class WebController extends Controller
 {
     public function portfolioDailyExcel(Request $request)
     {
-        $date = $request->date ? $request->date : today()->format('Y-m-d');
-        $name = 'Reporte_Cartera_Credyfacil_' . Carbon::parse($date)->format('d_m_Y') . '.xlsx';
+        $date = $request->date ? Carbon::parse($request->date) : today();
+        
+        $goalsExist = Goal::where('month', $date->month)
+            ->where('year', $date->year)
+            ->exists();
 
-        return Excel::download(new PortfolioDailyReportExport($date), $name);
+        if (!$goalsExist) {
+            return redirect()->route('goals.index', ['month' => $date->month, 'year' => $date->year])
+                ->with('message', 'Debe registrar las metas de este mes antes de generar el reporte.');
+        }
+
+        $name = 'Reporte_Cartera_Credyfacil_' . $date->format('d_m_Y') . '.xlsx';
+
+        return Excel::download(new PortfolioDailyReportExport($date->format('Y-m-d')), $name);
     }
 
     public function index(Request $request){

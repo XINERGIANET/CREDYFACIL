@@ -14,6 +14,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\InterestController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\GoalController;
 
 
 Route::get('optimize', function () {
@@ -87,4 +88,7 @@ Route::middleware('role:admin')->group(function () {
 	Route::get('interests/monthly', [InterestController::class, 'index'])->name('interests.monthly');
 
 	Route::post('config/insurance', [ConfigController::class, 'insurance'])->name('config.insurance');
+
+	Route::get('goals', [GoalController::class, 'index'])->name('goals.index');
+	Route::post('goals', [GoalController::class, 'store'])->name('goals.store');
 });

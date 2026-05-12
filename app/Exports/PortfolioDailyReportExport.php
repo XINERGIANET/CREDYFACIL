@@ -6,6 +6,7 @@ use App\Models\Contract;
 use App\Models\Payment;
 use App\Models\Quota;
 use App\Models\User;
+use App\Models\Goal;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -21,24 +22,7 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvents, WithTitle
 {
     private $reportDate;
-
-    private $goals = [
-        12 => ['clients' => 3,  'new' => 4,  'disbursement' => 90000],
-        13 => ['clients' => 5,  'new' => 6,  'disbursement' => 80000],
-        15 => ['clients' => 10, 'new' => 12, 'disbursement' => 35000],
-        16 => ['clients' => 12, 'new' => 10, 'disbursement' => 65000],
-        17 => ['clients' => 15, 'new' => 16, 'disbursement' => 30000],
-        19 => ['clients' => 12, 'new' => 12, 'disbursement' => 5000],
-    ];
-
-    private $goalNames = [
-        'JACQUELINE' => ['clients' => 3,  'new' => 4,  'disbursement' => 90000],
-        'JHON'       => ['clients' => 5,  'new' => 6,  'disbursement' => 80000],
-        'MATIAS'     => ['clients' => 10, 'new' => 12, 'disbursement' => 35000],
-        'KATHERINE'  => ['clients' => 12, 'new' => 10, 'disbursement' => 65000],
-        'YESENIA'    => ['clients' => 15, 'new' => 16, 'disbursement' => 30000],
-        'JESSICA'    => ['clients' => 12, 'new' => 12, 'disbursement' => 5000],
-    ];
+    private $cachedGoals;
 
     public function __construct($date = null)
     {
@@ -246,16 +230,21 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
 
     private function sellerGoals(User $seller): array
     {
-        if (isset($this->goals[$seller->id])) {
-            return $this->goals[$seller->id];
+        if (!$this->cachedGoals) {
+            $this->cachedGoals = Goal::where('month', $this->reportDate->month)
+                ->where('year', $this->reportDate->year)
+                ->get()
+                ->keyBy('seller_id');
         }
 
-        $name = strtoupper($seller->name);
+        $goal = $this->cachedGoals->get($seller->id);
 
-        foreach ($this->goalNames as $needle => $goals) {
-            if (strpos($name, $needle) !== false) {
-                return $goals;
-            }
+        if ($goal) {
+            return [
+                'clients' => $goal->clients,
+                'new' => $goal->new_clients,
+                'disbursement' => $goal->disbursement
+            ];
         }
 
         return ['clients' => 0, 'new' => 0, 'disbursement' => 0];

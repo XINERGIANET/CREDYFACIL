@@ -195,6 +195,16 @@
                                     </span>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('goals.index') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-target icon"></i>
+                                    </span>
+                                    <span class="nav-link-title">
+                                        Metas
+                                    </span>
+                                </a>
+                            </li>
                         @endif
                         @endif
                     </ul>
