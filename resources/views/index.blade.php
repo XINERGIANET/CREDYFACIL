@@ -4,11 +4,6 @@
 
 @section('content')
 @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
-<div class="d-flex justify-content-end mb-3">
-	<a class="btn btn-success" href="{{ route('reports.portfolio-daily.excel', ['date' => request()->end_date_2 ?: now()->format('Y-m-d')]) }}" target="_blank">
-		<i class="ti ti-file-spreadsheet icon"></i> Reporte cartera al dia
-	</a>
-</div>
 <div class="row">
 	<div class="col-md-9">
 		<form class="mb-4">
@@ -46,6 +41,7 @@
 			<input type="hidden" name="start_date_3" value="{{ request()->start_date_3 }}">
 			<input type="hidden" name="end_date_3" value="{{ request()->end_date_3 }}">
 			<input type="hidden" name="seller_id_2" value="{{ request()->seller_id_2 }}">
+			<input type="hidden" name="portfolio_date" value="{{ request()->portfolio_date }}">
 			<button type="submit" class="btn btn-primary"><i class="ti ti-filter icon"></i> Filtrar</button>
 		</form>
 	</div>
@@ -90,6 +86,7 @@
 		<input type="hidden" name="end_date_4" value="{{ request()->end_date_4 }}">
 		<input type="hidden" name="seller_id_1" value="{{ request()->seller_id_1 }}">
 		<input type="hidden" name="seller_id_2" value="{{ request()->seller_id_2 }}">
+		<input type="hidden" name="portfolio_date" value="{{ request()->portfolio_date }}">
 		<button type="submit" class="btn btn-primary"><i class="ti ti-filter icon"></i> Filtrar</button>
 	</form>
 </div>
@@ -154,6 +151,7 @@
 			<input type="hidden" name="end_date_4" value="{{ request()->end_date_4 }}">
 			<input type="hidden" name="seller_id_1" value="{{ request()->seller_id_1 }}">
 			<input type="hidden" name="seller_id_2" value="{{ request()->seller_id_2 }}">
+			<input type="hidden" name="portfolio_date" value="{{ request()->portfolio_date }}">
 			<button type="submit" class="btn btn-primary"><i class="ti ti-filter icon"></i> Filtrar</button>
 		</form>
 		<div class="row">
@@ -223,15 +221,44 @@
 <hr>
 @endif
 
+@php
+    $portfolioDate = request()->portfolio_date ?? now()->format('Y-m-d');
+    $displayDate = \Carbon\Carbon::parse($portfolioDate)->format('d/m/Y');
+@endphp
+<div class="card mb-3 shadow-sm">
+    <div class="card-header">
+        <h3 class="card-title mb-0">Reportes de cartera</h3>
+    </div>
+    <div class="card-body">
+        <form class="row g-3 align-items-end">
+            <div class="col-md-4 col-lg-3">
+                <label class="form-label">Fecha del reporte</label>
+                <input type="date" class="form-control" name="portfolio_date" value="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}">
+            </div>
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-filter icon"></i> Filtrar reportes
+                </button>
+            </div>
+            <input type="hidden" name="start_date_1" value="{{ request()->start_date_1 }}">
+            <input type="hidden" name="end_date_1" value="{{ request()->end_date_1 }}">
+            <input type="hidden" name="start_date_2" value="{{ request()->start_date_2 }}">
+            <input type="hidden" name="end_date_2" value="{{ request()->end_date_2 }}">
+            <input type="hidden" name="start_date_3" value="{{ request()->start_date_3 }}">
+            <input type="hidden" name="end_date_3" value="{{ request()->end_date_3 }}">
+            <input type="hidden" name="start_date_4" value="{{ request()->start_date_4 }}">
+            <input type="hidden" name="end_date_4" value="{{ request()->end_date_4 }}">
+            <input type="hidden" name="seller_id_1" value="{{ request()->seller_id_1 }}">
+            <input type="hidden" name="seller_id_2" value="{{ request()->seller_id_2 }}">
+        </form>
+    </div>
+</div>
 <div class="card mb-4 shadow-sm">
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-        @php
-            $portfolioDate = request()->end_date_4 ?? request()->end_date_2 ?? now();
-            $displayDate = \Carbon\Carbon::parse($portfolioDate)->format('d/m/Y');
-        @endphp
         <h3 class="card-title mb-0" style="color: #00E5E5 !important;">Reporte de Cartera al Día ({{ $displayDate }})</h3>
-        <a class="btn btn-sm btn-success" href="{{ route('reports.portfolio-daily.excel', ['date' => \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d')]) }}" target="_blank">
-            <i class="ti ti-file-spreadsheet icon"></i> Excel
+        <a class="btn btn-sm btn-success btn-report-excel" href="{{ route('reports.portfolio-daily.excel', ['date' => \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d')]) }}" target="_blank">
+            <i class="ti ti-file-spreadsheet"></i>
+            <span>Excel</span>
         </a>
     </div>
     <div class="table-responsive">
@@ -249,6 +276,8 @@
             .portfolio-detail-cell { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
             .table-overdue th, .table-overdue td { border-color: #000 !important; color: #000; }
             .table-overdue .bg-grey-report { color: #fff !important; }
+            .btn-report-excel { gap: 6px; min-height: 32px; padding: 6px 10px; line-height: 1; font-weight: 600; }
+            .btn-report-excel i { font-size: 18px; line-height: 1; }
         </style>
         <table class="table table-bordered table-portfolio mb-0">
             <thead>
@@ -394,6 +423,42 @@
     </div>
 </div>
 <h2>Indicadores de productividad</h2>
+<div class="card mb-3 shadow-sm">
+	<div class="card-body">
+		<form class="row g-3 align-items-end">
+			<div class="col-md-3">
+				<label class="form-label">Fecha desde</label>
+				<input type="date" class="form-control" name="start_date_2" value="{{ request()->start_date_2 }}">
+			</div>
+			<div class="col-md-3">
+				<label class="form-label">Fecha hasta</label>
+				<input type="date" class="form-control" name="end_date_2" value="{{ request()->end_date_2 }}">
+			</div>
+			@if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
+			<div class="col-md-3">
+				<label class="form-label">Asesor comercial</label>
+				<select class="form-select" name="seller_id_2">
+					<option value="">Seleccionar</option>
+					@foreach($sellers as $seller)
+					<option value="{{ $seller->id }}" @if($seller->id == request()->seller_id_2) selected @endif>{{ $seller->name }}</option>
+					@endforeach
+				</select>
+			</div>
+			@endif
+			<div class="col-md-auto">
+				<button type="submit" class="btn btn-primary"><i class="ti ti-filter icon"></i> Filtrar productividad</button>
+			</div>
+			<input type="hidden" name="start_date_1" value="{{ request()->start_date_1 }}">
+			<input type="hidden" name="end_date_1" value="{{ request()->end_date_1 }}">
+			<input type="hidden" name="start_date_3" value="{{ request()->start_date_3 }}">
+			<input type="hidden" name="end_date_3" value="{{ request()->end_date_3 }}">
+			<input type="hidden" name="start_date_4" value="{{ request()->start_date_4 }}">
+			<input type="hidden" name="end_date_4" value="{{ request()->end_date_4 }}">
+			<input type="hidden" name="seller_id_1" value="{{ request()->seller_id_1 }}">
+			<input type="hidden" name="portfolio_date" value="{{ request()->portfolio_date }}">
+		</form>
+	</div>
+</div>
 <div class="row mb-4">
 	<div class="col-md-6">
 		<h3>Evolución de ventas vs egresos</h3>
@@ -404,43 +469,6 @@
 		</div>
 	</div>
 	<div class="col-md-6">
-		<form class="mb-4">
-			<div class="row">
-				<div class="col-md-6">
-					<div class="mb-3">
-						<label class="form-label">Fecha desde</label>
-						<input type="date" class="form-control" name="start_date_2" value="{{ request()->start_date_2 }}">
-					</div>
-				</div>
-				<div class="col-md-6">
-					<div class="mb-3">
-						<label class="form-label">Fecha hasta</label>
-						<input type="date" class="form-control" name="end_date_2" value="{{ request()->end_date_2 }}">
-					</div>
-				</div>
-				@if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
-				<div class="col-md-6">
-					<div class="mb-3">
-						<label class="form-label">Asesor comercial</label>
-						<select class="form-select" name="seller_id_2">
-							<option value="">Seleccionar</option>
-							@foreach($sellers as $seller)
-							<option value="{{ $seller->id }}" @if($seller->id == request()->seller_id_2) selected @endif>{{ $seller->name }}</option>
-							@endforeach
-						</select>
-					</div>
-				</div>
-				@endif
-			</div>
-			<input type="hidden" name="start_date_1" value="{{ request()->start_date_1 }}">
-			<input type="hidden" name="end_date_1" value="{{ request()->end_date_1 }}">
-			<input type="hidden" name="start_date_3" value="{{ request()->start_date_3 }}">
-			<input type="hidden" name="end_date_3" value="{{ request()->end_date_3 }}">
-			<input type="hidden" name="start_date_4" value="{{ request()->start_date_4 }}">
-			<input type="hidden" name="end_date_4" value="{{ request()->end_date_4 }}">
-			<input type="hidden" name="seller_id_1" value="{{ request()->seller_id_1 }}">
-			<button type="submit" class="btn btn-primary"><i class="ti ti-filter icon"></i> Filtrar</button>
-		</form>
 		<div class="row">
 			<div class="col-md-6">
 				<div class="card mb-4">

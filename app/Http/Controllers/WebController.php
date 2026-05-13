@@ -488,7 +488,7 @@ class WebController extends Controller
         })->where('paid', 0)
         ->count();
 
-        $portfolioReportDate = $request->end_date_4 ?? $request->end_date_2 ?? now()->format('Y-m-d');
+        $portfolioReportDate = $request->portfolio_date ?? now()->format('Y-m-d');
         $portfolioReport = (new \App\Exports\PortfolioDailyReportExport($portfolioReportDate))->data();
         $portfolioOverdueReport = $this->portfolioOverdueReport($portfolioReportDate);
 
