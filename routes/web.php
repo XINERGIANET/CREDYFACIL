@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
 
 	Route::get('/', [WebController::class, 'index']);
 	Route::get('reports/portfolio-daily/excel', [WebController::class, 'portfolioDailyExcel'])->name('reports.portfolio-daily.excel');
+	Route::get('reports/portfolio-daily/clients', [WebController::class, 'reportClients'])->name('reports.portfolio-daily.clients');
 
 	Route::get('api/reniec', [WebController::class, 'apiReniec'])->name('api.reniec');
 	Route::get('api/provinces', [WebController::class, 'apiProvinces'])->name('api.provinces');

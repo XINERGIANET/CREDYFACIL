@@ -83,10 +83,14 @@
 								<td>{{ $quota->date->format('d/m/Y') }}</td>
 								<td>
 									@if($quota->paid == 0)
+										@php
+											$isNext = $quota->number == ($nextQuotas[$quota->contract_id] ?? null);
+										@endphp
 										<button class="btn btn-primary btn-pay" data-contract-id="{{ $quota->contract_id }}"
+											{{ $isNext ? '' : 'disabled' }}
 											data-quota-id="{{ $quota->id }}" data-amount="{{ $quota->debt }}"
 											data-client="{{ $quota->contract->client() }}" data-people="{{ $quota->contract->people }}"
-											title="Cobrar">
+											title="{{ $isNext ? 'Cobrar' : 'Debe cobrar la cuota anterior' }}">
 											<i class="ti ti-cash"></i>
 										</button>
 									@endif

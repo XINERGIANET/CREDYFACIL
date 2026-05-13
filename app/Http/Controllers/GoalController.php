@@ -46,7 +46,6 @@ class GoalController extends Controller
                     'year' => $request->year,
                 ],
                 [
-                    'clients' => $data['clients'] ?? 0,
                     'new_clients' => $data['new_clients'] ?? 0,
                     'disbursement' => $data['disbursement'] ?? 0,
                 ]

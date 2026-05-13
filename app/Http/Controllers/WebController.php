@@ -488,8 +488,11 @@ class WebController extends Controller
         })->where('paid', 0)
         ->count();
 
+        $portfolioReportDate = $request->end_date_4 ?? $request->end_date_2 ?? now()->format('Y-m-d');
+        $portfolioReport = (new \App\Exports\PortfolioDailyReportExport($portfolioReportDate))->data();
+
         return view('index', compact(
-                'today_payments', 'today_projected', 'today_real', 'active_clients', 'due_clients', 'home_sales_1', 'sales_1', 'sales_2', 'sales_3', 'sales_4', 'sales_5', 'sales_6', 'total', 'due_total', 'wallet_total', 'requested_amount', 'expenses', 'sales_totals_1', 'expenses_totals_1', 'sales_totals_2', 'expenses_totals_2', 'sellers','seller_wallet','today_timely_payments','due_quotas',));
+                'today_payments', 'today_projected', 'today_real', 'active_clients', 'due_clients', 'home_sales_1', 'sales_1', 'sales_2', 'sales_3', 'sales_4', 'sales_5', 'sales_6', 'total', 'due_total', 'wallet_total', 'requested_amount', 'expenses', 'sales_totals_1', 'expenses_totals_1', 'sales_totals_2', 'expenses_totals_2', 'sellers','seller_wallet','today_timely_payments','due_quotas','portfolioReport'));
     }
 
     public function apiReniec(Request $request){
@@ -534,5 +537,39 @@ class WebController extends Controller
             ->get();
 
         return response()->json($districts);
+    }
+    public function reportClients(Request $request)
+    {
+        $sellerId = $request->seller_id;
+        $date = $request->date ? \Carbon\Carbon::parse($request->date) : today();
+
+        $contracts = Contract::active()
+            ->where('approved', 1)
+            ->when($sellerId, function ($query, $sellerId) {
+                return $query->where('seller_id', $sellerId);
+            })
+            ->whereDate('date', '<=', $date)
+            ->where(function ($query) use ($date) {
+                $query->whereHas('quotas', function ($q) {
+                    $q->where('debt', '>', 0);
+                })->orWhereHas('quotas.payments', function ($q) use ($date) {
+                    $q->active()->whereDate('date', '>', $date);
+                });
+            })
+            ->with('seller')
+            ->get();
+
+        $clients = [];
+        foreach ($contracts as $contract) {
+            $clients[] = [
+                'name' => $contract->client(),
+                'seller' => $contract->seller ? $contract->seller->name : 'N/A',
+                'document' => $contract->document ?? $contract->group_name,
+                'amount' => number_format($contract->requested_amount, 2),
+                'date' => $contract->date->format('d/m/Y')
+            ];
+        }
+
+        return response()->json($clients);
     }
 }

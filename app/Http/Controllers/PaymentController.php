@@ -77,7 +77,15 @@ class PaymentController extends Controller
         })->where('paid', 0)->orderBy('date')->paginate(20);
 
         $payment_methods = PaymentMethod::active()->get();
-        return view('payments.charges', compact('quotas', 'sellers', 'payment_methods'));
+
+        $nextQuotas = Quota::whereIn('contract_id', $quotas->pluck('contract_id'))
+            ->where('paid', 0)
+            ->groupBy('contract_id')
+            ->select('contract_id', DB::raw('MIN(number) as next_number'))
+            ->get()
+            ->pluck('next_number', 'contract_id');
+
+        return view('payments.charges', compact('quotas', 'sellers', 'payment_methods', 'nextQuotas'));
     }
 
     public function dues(Request $request){
@@ -103,7 +111,15 @@ class PaymentController extends Controller
         })->whereDate('date', '<', $date)->where('paid', 0)->with('contract.seller')->paginate(20);
 
         $payment_methods = PaymentMethod::active()->get();
-        return view('payments.dues', compact('quotas', 'sellers', 'payment_methods'));
+
+        $nextQuotas = Quota::whereIn('contract_id', $quotas->pluck('contract_id'))
+            ->where('paid', 0)
+            ->groupBy('contract_id')
+            ->select('contract_id', DB::raw('MIN(number) as next_number'))
+            ->get()
+            ->pluck('next_number', 'contract_id');
+
+        return view('payments.dues', compact('quotas', 'sellers', 'payment_methods', 'nextQuotas'));
     }
 
     public function store(Request $request){
@@ -127,6 +143,15 @@ class PaymentController extends Controller
             if($quota){
                 if($request->amount > $quota->debt){
                     $validator->errors()->add('cart', 'El pago debe ser menor o igual al saldo pendiente');
+                }
+
+                $previousQuota = Quota::where('contract_id', $quota->contract_id)
+                    ->where('paid', 0)
+                    ->where('number', '<', $quota->number)
+                    ->exists();
+
+                if($previousQuota){
+                    $validator->errors()->add('cart', 'Debe cobrar la cuota anterior antes de proceder con esta');
                 }
             }else{
                 $validator->errors()->add('cart', 'La cuota no se encuentra');
