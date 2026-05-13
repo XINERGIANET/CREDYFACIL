@@ -551,16 +551,20 @@ class WebController extends Controller
 
         switch ($metric) {
             case 'initial_clients':
-                return response()->json($this->contractsDetail(
+                return response()->json($this->activeContractsDetail(
                     'INIC. MES N° CLIENTES',
                     $this->activeContractsAsOf($sellerId, $initialDate),
                     'Clientes activos al ' . $initialDate->format('d/m/Y')
+                        . ': contratos creados hasta esa fecha que aun tenian deuda o pagos posteriores al corte.',
+                    $initialDate
                 ));
             case 'current_clients':
-                return response()->json($this->contractsDetail(
+                return response()->json($this->activeContractsDetail(
                     'AVANCE N° CLIENT. AL DIA',
                     $this->activeContractsAsOf($sellerId, $date),
                     'Clientes activos al ' . $date->format('d/m/Y')
+                        . ': contratos creados hasta esa fecha que aun tenian deuda o pagos posteriores al corte.',
+                    $date
                 ));
             case 'client_growth':
                 return response()->json($this->summaryDetail('CRECIMIENTO N° CLIENTES', [
@@ -733,6 +737,67 @@ class WebController extends Controller
                 ];
             })->values(),
         ];
+    }
+
+    private function activeContractsDetail(string $title, $contracts, string $subtitle, Carbon $date): array
+    {
+        return [
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'headers' => ['Cliente', 'Documento/Grupo', 'Monto contrato', 'Deuda al corte', 'Fecha contrato', 'Asesor', 'Motivo'],
+            'rows' => $contracts->map(function ($contract) use ($date) {
+                return [
+                    $contract->client(),
+                    $contract->document ?? $contract->group_name,
+                    'S/ ' . number_format($contract->requested_amount, 2),
+                    'S/ ' . number_format($this->contractDebtAsOf($contract->id, $date), 2),
+                    optional($contract->date)->format('d/m/Y'),
+                    $contract->seller ? $contract->seller->name : 'N/A',
+                    $this->contractActiveReason($contract->id, $date),
+                ];
+            })->values(),
+        ];
+    }
+
+    private function contractDebtAsOf($contractId, Carbon $date): float
+    {
+        $currentDebt = (float) Quota::where('contract_id', $contractId)->sum('debt');
+        $futurePayments = (float) Payment::active()
+            ->whereDate('payments.date', '>', $date)
+            ->whereHas('quota', function ($query) use ($contractId) {
+                return $query->where('contract_id', $contractId);
+            })
+            ->sum('amount');
+
+        return $currentDebt + $futurePayments;
+    }
+
+    private function contractActiveReason($contractId, Carbon $date): string
+    {
+        $hasDebt = Quota::where('contract_id', $contractId)
+            ->where('debt', '>', 0)
+            ->exists();
+
+        $hasFuturePayments = Payment::active()
+            ->whereDate('payments.date', '>', $date)
+            ->whereHas('quota', function ($query) use ($contractId) {
+                return $query->where('contract_id', $contractId);
+            })
+            ->exists();
+
+        if ($hasDebt && $hasFuturePayments) {
+            return 'Deuda pendiente y pagos posteriores al corte';
+        }
+
+        if ($hasDebt) {
+            return 'Deuda pendiente al corte';
+        }
+
+        if ($hasFuturePayments) {
+            return 'Pago registrado despues del corte';
+        }
+
+        return 'Activo al corte';
     }
 
     private function summaryDetail(string $title, array $rows): array
