@@ -391,6 +391,8 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
                 $sheet->getStyle('L3:L' . $lastRow)->getNumberFormat()->setFormatCode('"S/" #,##0.0');
                 $sheet->getStyle('N3:N' . $lastRow)->getNumberFormat()->setFormatCode('"S/" #,##0');
                 $sheet->getStyle('P3:P' . $lastRow)->getNumberFormat()->setFormatCode('"S/" #,##0');
+                $sheet->getStyle('M3:M' . $lastRow)->getNumberFormat()->setFormatCode('#,##0');
+                $sheet->getStyle('O3:O' . $lastRow)->getNumberFormat()->setFormatCode('#,##0');
                 $sheet->getStyle('G3:G' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
                 $sheet->getStyle('K3:K' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);
                 $sheet->getStyle('Q3:Q' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);

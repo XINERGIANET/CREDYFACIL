@@ -244,6 +244,11 @@
             .bg-red-report { background-color: #FF0000 !important; color: #fff !important; font-weight: bold; }
             .bg-total-report { background-color: #00F000 !important; font-weight: bold; }
             .bg-total-report td { font-weight: bold; }
+            .bg-overdue-title { background-color: #F27AF0 !important; color: #000 !important; font-size: 1rem !important; font-weight: 800; }
+            .bg-overdue-alert { background-color: #FFC7CE !important; color: #C00000 !important; }
+            .portfolio-detail-cell { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+            .table-overdue th, .table-overdue td { border-color: #000 !important; color: #000; }
+            .table-overdue .bg-grey-report { color: #fff !important; }
         </style>
         <table class="table table-bordered table-portfolio mb-0">
             <thead>
@@ -275,24 +280,22 @@
                     @endphp
                     <tr>
                         <td class="fw-bold">{{ $row[0] }}</td>
-                        <td class="bg-grey-report">{{ number_format($row[1], 0) }}</td>
-                        <td class="clickable-cell" style="cursor: pointer;" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver clientes">
-                            <u>{{ number_format($row[2], 0) }}</u>
-                        </td>
-                        <td>{{ number_format($row[3], 0) }}</td>
-                        <td class="bg-grey-report">{{ number_format($row[4], 0) }}</td>
-                        <td class="bg-yellow-report">{{ number_format($row[5], 0) }}</td>
-                        <td class="bg-green-report fw-semibold">{{ $row[6] ? number_format($row[6] * 100, 2) . '%' : '-' }}</td>
-                        <td class="bg-grey-report">S/{{ number_format($row[7], 1) }}</td>
-                        <td>S/{{ number_format($row[8], 1) }}</td>
-                        <td>S/{{ number_format($row[9], 1) }}</td>
-                        <td class="bg-red-report">{{ $row[10] ? number_format($row[10] * 100, 2) . '%' : '-' }}</td>
-                        <td class="bg-grey-report">S/{{ number_format($row[11], 1) }}</td>
-                        <td class="bg-grey-report">S/{{ number_format($row[12], 1) }}</td>
-                        <td>S/{{ number_format($row[13], 0) }}</td>
-                        <td>{{ number_format($row[14], 0) }}</td>
-                        <td class="bg-yellow-report">S/{{ number_format($row[15], 0) }}</td>
-                        <td class="bg-green-report fw-semibold">{{ $row[16] ? number_format($row[16] * 100, 2) . '%' : '-' }}</td>
+                        <td class="bg-grey-report portfolio-detail-cell" data-metric="initial_clients" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[1], 0) }}</td>
+                        <td class="portfolio-detail-cell" data-metric="current_clients" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[2], 0) }}</td>
+                        <td class="portfolio-detail-cell" data-metric="client_growth" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[3], 0) }}</td>
+                        <td class="bg-grey-report portfolio-detail-cell" data-metric="new_clients" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[4], 0) }}</td>
+                        <td class="bg-yellow-report portfolio-detail-cell" data-metric="new_goal" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[5], 0) }}</td>
+                        <td class="bg-green-report fw-semibold portfolio-detail-cell" data-metric="new_percent" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $row[6] ? number_format($row[6] * 100, 2) . '%' : '-' }}</td>
+                        <td class="bg-grey-report portfolio-detail-cell" data-metric="initial_wallet" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[7], 1) }}</td>
+                        <td class="portfolio-detail-cell" data-metric="current_wallet" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[8], 1) }}</td>
+                        <td class="portfolio-detail-cell" data-metric="wallet_growth" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[9], 1) }}</td>
+                        <td class="bg-red-report portfolio-detail-cell" data-metric="overdue_percent" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $row[10] ? number_format($row[10] * 100, 2) . '%' : '-' }}</td>
+                        <td class="bg-grey-report portfolio-detail-cell" data-metric="previous_disbursement" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[11], 1) }}</td>
+                        <td class="bg-grey-report portfolio-detail-cell" data-metric="previous_operations" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[12], 0) }}</td>
+                        <td class="portfolio-detail-cell" data-metric="current_disbursement" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[13], 0) }}</td>
+                        <td class="portfolio-detail-cell" data-metric="current_operations" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[14], 0) }}</td>
+                        <td class="bg-yellow-report portfolio-detail-cell" data-metric="disbursement_goal" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[15], 0) }}</td>
+                        <td class="bg-green-report fw-semibold portfolio-detail-cell" data-metric="disbursement_percent" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $row[16] ? number_format($row[16] * 100, 2) . '%' : '-' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -300,24 +303,91 @@
                 <tr class="bg-total-report">
                     @php $totals = $portfolioReport['totals']; @endphp
                     <td>{{ $totals[0] }}</td>
-                    <td>{{ number_format($totals[1], 0) }}</td>
-                    <td class="clickable-cell" style="cursor: pointer;" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver todos los clientes">
-                        <u>{{ number_format($totals[2], 0) }}</u>
-                    </td>
-                    <td>{{ number_format($totals[3], 0) }}</td>
-                    <td>{{ number_format($totals[4], 0) }}</td>
-                    <td>{{ number_format($totals[5], 0) }}</td>
-                    <td>{{ $totals[6] ? number_format($totals[6] * 100, 2) . '%' : '-' }}</td>
-                    <td>S/{{ number_format($totals[7], 1) }}</td>
-                    <td>S/{{ number_format($totals[8], 1) }}</td>
-                    <td>S/{{ number_format($totals[9], 1) }}</td>
-                    <td>{{ $totals[10] ? number_format($totals[10] * 100, 2) . '%' : '-' }}</td>
-                    <td>S/{{ number_format($totals[11], 1) }}</td>
-                    <td>S/{{ number_format($totals[12], 1) }}</td>
-                    <td>S/{{ number_format($totals[13], 0) }}</td>
-                    <td>{{ number_format($totals[14], 0) }}</td>
-                    <td>S/{{ number_format($totals[15], 0) }}</td>
-                    <td>{{ $totals[16] ? number_format($totals[16] * 100, 2) . '%' : '-' }}</td>
+                    <td class="portfolio-detail-cell" data-metric="initial_clients" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[1], 0) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="current_clients" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[2], 0) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="client_growth" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[3], 0) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="new_clients" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[4], 0) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="new_goal" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[5], 0) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="new_percent" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $totals[6] ? number_format($totals[6] * 100, 2) . '%' : '-' }}</td>
+                    <td class="portfolio-detail-cell" data-metric="initial_wallet" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[7], 1) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="current_wallet" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[8], 1) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="wallet_growth" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[9], 1) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="overdue_percent" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $totals[10] ? number_format($totals[10] * 100, 2) . '%' : '-' }}</td>
+                    <td class="portfolio-detail-cell" data-metric="previous_disbursement" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[11], 1) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="previous_operations" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[12], 0) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="current_disbursement" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[13], 0) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="current_operations" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[14], 0) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="disbursement_goal" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[15], 0) }}</td>
+                    <td class="portfolio-detail-cell" data-metric="disbursement_percent" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $totals[16] ? number_format($totals[16] * 100, 2) . '%' : '-' }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+@php
+    $overdueDate = $portfolioOverdueReport['date'];
+    $overdueMoney = function ($value) {
+        return $value > 0 ? 'S/ ' . number_format($value, 1) : 'S/ -';
+    };
+    $overduePercent = function ($value, $decimals = 1) {
+        return number_format($value * 100, $decimals) . '%';
+    };
+@endphp
+<div class="card mb-4 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-bordered table-portfolio table-overdue mb-0">
+            <thead>
+                <tr>
+                    <th class="bg-overdue-title" colspan="12">REPORTE DE CARTERA MOROSA CREDYFACIL AL {{ $overdueDate->format('d/m/Y') }}</th>
+                </tr>
+                <tr>
+                    <th></th>
+                    <th>AVANCE CARTERA</th>
+                    <th>MORA<br>1 a 7</th>
+                    <th>%</th>
+                    <th>MORA<br>8 a 30</th>
+                    <th>%</th>
+                    <th>MORA<br>&gt;7</th>
+                    <th>%</th>
+                    <th>MORA &gt;60</th>
+                    <th>%</th>
+                    <th>MORA<br>TOTAL</th>
+                    <th>%</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($portfolioOverdueReport['rows'] as $row)
+                    <tr>
+                        <td class="fw-bold text-start">{{ $row['seller'] }}</td>
+                        <td class="bg-yellow-report fw-bold text-nowrap">S/ {{ number_format($row['wallet'], 1) }}</td>
+                        <td class="bg-grey-report fw-bold text-nowrap">{{ $overdueMoney($row['mora_1_7']) }}</td>
+                        <td class="fw-bold {{ $row['mora_1_7_percent'] > 0 ? 'bg-overdue-alert' : '' }}">{{ $overduePercent($row['mora_1_7_percent']) }}</td>
+                        <td class="bg-grey-report fw-bold text-nowrap">{{ $overdueMoney($row['mora_8_30']) }}</td>
+                        <td class="fw-bold {{ $row['mora_8_30_percent'] > 0 ? 'bg-overdue-alert' : '' }}">{{ $overduePercent($row['mora_8_30_percent']) }}</td>
+                        <td class="bg-grey-report fw-bold text-nowrap">{{ $overdueMoney($row['mora_gt_7']) }}</td>
+                        <td class="fw-bold {{ $row['mora_gt_7_percent'] > 0 ? 'bg-overdue-alert' : '' }}">{{ $overduePercent($row['mora_gt_7_percent'], 2) }}</td>
+                        <td class="bg-grey-report fw-bold text-nowrap">{{ $overdueMoney($row['mora_gt_60']) }}</td>
+                        <td class="fw-bold {{ $row['mora_gt_60_percent'] > 0 ? 'bg-overdue-alert' : '' }}">{{ $overduePercent($row['mora_gt_60_percent']) }}</td>
+                        <td class="bg-grey-report fw-bold text-nowrap">{{ $overdueMoney($row['mora_total']) }}</td>
+                        <td class="fw-bold {{ $row['mora_total_percent'] > 0 ? 'bg-overdue-alert' : '' }}">{{ $overduePercent($row['mora_total_percent']) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+            <tfoot>
+                @php $overdueTotals = $portfolioOverdueReport['totals']; @endphp
+                <tr class="bg-total-report">
+                    <td class="fw-bold text-start">CREDYFACIL</td>
+                    <td class="fw-bold text-nowrap">{{ number_format($overdueTotals['wallet'], 1) }}</td>
+                    <td class="fw-bold text-nowrap">S/ {{ number_format($overdueTotals['mora_1_7'], 1) }}</td>
+                    <td class="fw-bold">{{ $overduePercent($overdueTotals['mora_1_7_percent'], 2) }}</td>
+                    <td class="fw-bold text-nowrap">S/ {{ number_format($overdueTotals['mora_8_30'], 1) }}</td>
+                    <td class="fw-bold">{{ $overduePercent($overdueTotals['mora_8_30_percent'], 2) }}</td>
+                    <td class="fw-bold text-nowrap">S/ {{ number_format($overdueTotals['mora_gt_7'], 1) }}</td>
+                    <td class="fw-bold">{{ $overduePercent($overdueTotals['mora_gt_7_percent'], 2) }}</td>
+                    <td class="fw-bold text-nowrap">S/ {{ number_format($overdueTotals['mora_gt_60'], 1) }}</td>
+                    <td class="fw-bold">{{ $overduePercent($overdueTotals['mora_gt_60_percent'], 2) }}</td>
+                    <td class="fw-bold text-nowrap">S/ {{ number_format($overdueTotals['mora_total'], 1) }}</td>
+                    <td class="fw-bold">{{ $overduePercent($overdueTotals['mora_total_percent'], 2) }}</td>
                 </tr>
             </tfoot>
         </table>
@@ -464,36 +534,53 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 	$(document).ready(function(){
-        $('.clickable-cell').on('click', function() {
+        $('.portfolio-detail-cell').on('click', function() {
             var sellerId = $(this).data('seller-id');
             var date = $(this).data('date');
+            var metric = $(this).data('metric');
             
-            $('#clientsTableBody').html('<tr><td colspan="5" class="text-center"><div class="spinner-border spinner-border-sm text-secondary" role="status"></div> Cargando...</td></tr>');
+            $('#clientsModal .modal-title').text('Detalle');
+            $('#clientsModal thead').html('<tr><th>Detalle</th></tr>');
+            $('#clientsTableBody').html('<tr><td class="text-center"><div class="spinner-border spinner-border-sm text-secondary" role="status"></div> Cargando...</td></tr>');
             $('#clientsModal').modal('show');
 
             $.ajax({
                 url: '{{ route('reports.portfolio-daily.clients') }}',
                 method: 'GET',
-                data: { seller_id: sellerId, date: date },
+                data: { seller_id: sellerId, date: date, metric: metric },
                 success: function(data) {
+                    var headers = data.headers || [];
+                    var rows = data.rows || [];
+                    var colspan = Math.max(headers.length, 1);
                     var html = '';
-                    if (data.length > 0) {
-                        data.forEach(function(client) {
-                            html += `<tr>
-                                <td>${client.name}</td>
-                                <td>${client.document}</td>
-                                <td class="text-nowrap">S/ ${client.amount}</td>
-                                <td class="text-nowrap">${client.date}</td>
-                                <td>${client.seller}</td>
-                            </tr>`;
+                    var head = '<tr>';
+
+                    $('#clientsModal .modal-title').text(data.title || 'Detalle');
+                    headers.forEach(function(header) {
+                        head += `<th>${header}</th>`;
+                    });
+                    head += '</tr>';
+                    $('#clientsModal thead').html(head);
+
+                    if (data.subtitle) {
+                        html += `<tr><td colspan="${colspan}" class="text-muted">${data.subtitle}</td></tr>`;
+                    }
+
+                    if (rows.length > 0) {
+                        rows.forEach(function(row) {
+                            html += '<tr>';
+                            row.forEach(function(value) {
+                                html += `<td>${value ?? ''}</td>`;
+                            });
+                            html += '</tr>';
                         });
                     } else {
-                        html = '<tr><td colspan="5" class="text-center">No se encontraron clientes.</td></tr>';
+                        html += `<tr><td colspan="${colspan}" class="text-center">No se encontraron datos.</td></tr>`;
                     }
                     $('#clientsTableBody').html(html);
                 },
                 error: function() {
-                    $('#clientsTableBody').html('<tr><td colspan="5" class="text-center text-danger">Error al cargar los datos.</td></tr>');
+                    $('#clientsTableBody').html('<tr><td class="text-center text-danger">Error al cargar los datos.</td></tr>');
                 }
             });
         });

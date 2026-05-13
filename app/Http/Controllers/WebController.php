@@ -490,9 +490,10 @@ class WebController extends Controller
 
         $portfolioReportDate = $request->end_date_4 ?? $request->end_date_2 ?? now()->format('Y-m-d');
         $portfolioReport = (new \App\Exports\PortfolioDailyReportExport($portfolioReportDate))->data();
+        $portfolioOverdueReport = $this->portfolioOverdueReport($portfolioReportDate);
 
         return view('index', compact(
-                'today_payments', 'today_projected', 'today_real', 'active_clients', 'due_clients', 'home_sales_1', 'sales_1', 'sales_2', 'sales_3', 'sales_4', 'sales_5', 'sales_6', 'total', 'due_total', 'wallet_total', 'requested_amount', 'expenses', 'sales_totals_1', 'expenses_totals_1', 'sales_totals_2', 'expenses_totals_2', 'sellers','seller_wallet','today_timely_payments','due_quotas','portfolioReport'));
+                'today_payments', 'today_projected', 'today_real', 'active_clients', 'due_clients', 'home_sales_1', 'sales_1', 'sales_2', 'sales_3', 'sales_4', 'sales_5', 'sales_6', 'total', 'due_total', 'wallet_total', 'requested_amount', 'expenses', 'sales_totals_1', 'expenses_totals_1', 'sales_totals_2', 'expenses_totals_2', 'sellers','seller_wallet','today_timely_payments','due_quotas','portfolioReport','portfolioOverdueReport'));
     }
 
     public function apiReniec(Request $request){
@@ -542,8 +543,113 @@ class WebController extends Controller
     {
         $sellerId = $request->seller_id;
         $date = $request->date ? \Carbon\Carbon::parse($request->date) : today();
+        $metric = $request->metric ?: 'current_clients';
+        $monthStart = $date->copy()->startOfMonth();
+        $initialDate = $monthStart->copy()->subDay();
+        $previousStart = $date->copy()->subMonthNoOverflow()->startOfMonth();
+        $previousEnd = $date->copy()->subMonthNoOverflow()->endOfMonth();
 
-        $contracts = Contract::active()
+        switch ($metric) {
+            case 'initial_clients':
+                return response()->json($this->contractsDetail(
+                    'INIC. MES N° CLIENTES',
+                    $this->activeContractsAsOf($sellerId, $initialDate),
+                    'Clientes activos al ' . $initialDate->format('d/m/Y')
+                ));
+            case 'current_clients':
+                return response()->json($this->contractsDetail(
+                    'AVANCE N° CLIENT. AL DIA',
+                    $this->activeContractsAsOf($sellerId, $date),
+                    'Clientes activos al ' . $date->format('d/m/Y')
+                ));
+            case 'client_growth':
+                return response()->json($this->summaryDetail('CRECIMIENTO N° CLIENTES', [
+                    ['Clientes al ' . $date->format('d/m/Y'), $this->activeContractsAsOf($sellerId, $date)->count()],
+                    ['Clientes al inicio de mes', $this->activeContractsAsOf($sellerId, $initialDate)->count()],
+                    ['Crecimiento', $this->activeContractsAsOf($sellerId, $date)->count() - $this->activeContractsAsOf($sellerId, $initialDate)->count()],
+                ]));
+            case 'new_clients':
+                return response()->json($this->contractsDetail(
+                    'NUEVOS',
+                    $this->newClientContracts($sellerId, $monthStart, $date),
+                    'Clientes nuevos desde ' . $monthStart->format('d/m/Y') . ' hasta ' . $date->format('d/m/Y')
+                ));
+            case 'new_goal':
+                return response()->json($this->goalDetail('META DE NUEVOS', $sellerId, $date, 'new_clients'));
+            case 'new_percent':
+                $newClients = $this->newClientContracts($sellerId, $monthStart, $date)->count();
+                $newGoal = $this->goalValue($sellerId, $date, 'new_clients');
+                return response()->json($this->summaryDetail('AVANCE NUEVOS %', [
+                    ['Clientes nuevos', $newClients],
+                    ['Meta de nuevos', $newGoal],
+                    ['Resultado', $newGoal > 0 ? number_format(($newClients / $newGoal) * 100, 2) . '%' : '-'],
+                ]));
+            case 'initial_wallet':
+                return response()->json($this->walletDetail('INIC. MES CARTERA', $sellerId, $initialDate));
+            case 'current_wallet':
+                return response()->json($this->walletDetail('AVANCE CARTERA', $sellerId, $date));
+            case 'wallet_growth':
+                $currentWallet = $this->walletValue($sellerId, $date);
+                $initialWallet = $this->walletValue($sellerId, $initialDate);
+                return response()->json($this->summaryDetail('CREC. CARTERA', [
+                    ['Cartera al ' . $date->format('d/m/Y'), 'S/ ' . number_format($currentWallet, 1)],
+                    ['Cartera al inicio de mes', 'S/ ' . number_format($initialWallet, 1)],
+                    ['Crecimiento cartera', 'S/ ' . number_format($currentWallet - $initialWallet, 1)],
+                ]));
+            case 'overdue_percent':
+                $wallet = $this->walletValue($sellerId, $date);
+                $overdue = $this->walletValue($sellerId, $date, 7);
+                return response()->json($this->summaryDetail('MORA >7', [
+                    ['Deuda vencida mayor a 7 dias', 'S/ ' . number_format($overdue, 1)],
+                    ['Avance cartera', 'S/ ' . number_format($wallet, 1)],
+                    ['Resultado', $wallet > 0 ? number_format(($overdue / $wallet) * 100, 2) . '%' : '-'],
+                ]));
+            case 'previous_disbursement':
+                return response()->json($this->contractsDetail(
+                    'DESEMBOLSO MES PASADO',
+                    $this->contractsBetween($sellerId, $previousStart, $previousEnd),
+                    'Contratos desde ' . $previousStart->format('d/m/Y') . ' hasta ' . $previousEnd->format('d/m/Y')
+                ));
+            case 'previous_operations':
+                return response()->json($this->contractsDetail(
+                    'N° OPER. MES PASADO',
+                    $this->contractsBetween($sellerId, $previousStart, $previousEnd),
+                    'Operaciones desde ' . $previousStart->format('d/m/Y') . ' hasta ' . $previousEnd->format('d/m/Y')
+                ));
+            case 'current_disbursement':
+                return response()->json($this->contractsDetail(
+                    'AVANCE DESEMB.',
+                    $this->contractsBetween($sellerId, $monthStart, $date),
+                    'Contratos desde ' . $monthStart->format('d/m/Y') . ' hasta ' . $date->format('d/m/Y')
+                ));
+            case 'current_operations':
+                return response()->json($this->contractsDetail(
+                    'N° DE OPER.',
+                    $this->contractsBetween($sellerId, $monthStart, $date),
+                    'Operaciones desde ' . $monthStart->format('d/m/Y') . ' hasta ' . $date->format('d/m/Y')
+                ));
+            case 'disbursement_goal':
+                return response()->json($this->goalDetail('META MES', $sellerId, $date, 'disbursement', true));
+            case 'disbursement_percent':
+                $disbursement = $this->contractsBetween($sellerId, $monthStart, $date)->sum('requested_amount');
+                $goal = $this->goalValue($sellerId, $date, 'disbursement');
+                return response()->json($this->summaryDetail('AVANCE DESEMBOLSOS %', [
+                    ['Avance desembolsos', 'S/ ' . number_format($disbursement, 0)],
+                    ['Meta mes', 'S/ ' . number_format($goal, 0)],
+                    ['Resultado', $goal > 0 ? number_format(($disbursement / $goal) * 100, 2) . '%' : '-'],
+                ]));
+            default:
+                return response()->json($this->contractsDetail(
+                    'Detalle',
+                    $this->activeContractsAsOf($sellerId, $date),
+                    'Clientes activos al ' . $date->format('d/m/Y')
+                ));
+        }
+    }
+
+    private function activeContractsAsOf($sellerId, Carbon $date)
+    {
+        return Contract::active()
             ->where('approved', 1)
             ->when($sellerId, function ($query, $sellerId) {
                 return $query->where('seller_id', $sellerId);
@@ -557,19 +663,289 @@ class WebController extends Controller
                 });
             })
             ->with('seller')
+            ->get()
+            ->unique(function ($contract) {
+                return ($contract->document ?: '') . '|' . ($contract->group_name ?: '');
+            })
+            ->values();
+    }
+
+    private function newClientContracts($sellerId, Carbon $start, Carbon $end)
+    {
+        return Contract::active()
+            ->where('approved', 1)
+            ->when($sellerId, function ($query, $sellerId) {
+                return $query->where('seller_id', $sellerId);
+            })
+            ->whereDate('date', '>=', $start)
+            ->whereDate('date', '<=', $end)
+            ->whereNotExists(function ($query) use ($start) {
+                $query->select(DB::raw(1))
+                    ->from('contracts as c2')
+                    ->where('c2.deleted', 0)
+                    ->where('c2.approved', 1)
+                    ->whereDate('c2.date', '<', $start)
+                    ->where(function ($q) {
+                        $q->where(function ($sq) {
+                            $sq->whereNotNull('contracts.document')
+                                ->whereColumn('c2.document', 'contracts.document');
+                        })->orWhere(function ($sq) {
+                            $sq->whereNotNull('contracts.group_name')
+                                ->whereColumn('c2.group_name', 'contracts.group_name');
+                        });
+                    });
+            })
+            ->with('seller')
+            ->get()
+            ->unique(function ($contract) {
+                return ($contract->document ?: '') . '|' . ($contract->group_name ?: '');
+            })
+            ->values();
+    }
+
+    private function contractsBetween($sellerId, Carbon $start, Carbon $end)
+    {
+        return Contract::active()
+            ->where('approved', 1)
+            ->when($sellerId, function ($query, $sellerId) {
+                return $query->where('seller_id', $sellerId);
+            })
+            ->whereDate('date', '>=', $start)
+            ->whereDate('date', '<=', $end)
+            ->with('seller')
+            ->orderBy('date')
+            ->get();
+    }
+
+    private function contractsDetail(string $title, $contracts, string $subtitle): array
+    {
+        return [
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'headers' => ['Cliente', 'Documento/Grupo', 'Monto', 'Fecha', 'Asesor'],
+            'rows' => $contracts->map(function ($contract) {
+                return [
+                    $contract->client(),
+                    $contract->document ?? $contract->group_name,
+                    'S/ ' . number_format($contract->requested_amount, 2),
+                    optional($contract->date)->format('d/m/Y'),
+                    $contract->seller ? $contract->seller->name : 'N/A',
+                ];
+            })->values(),
+        ];
+    }
+
+    private function summaryDetail(string $title, array $rows): array
+    {
+        return [
+            'title' => $title,
+            'subtitle' => 'Detalle del calculo mostrado en la celda',
+            'headers' => ['Concepto', 'Valor'],
+            'rows' => $rows,
+        ];
+    }
+
+    private function goalDetail(string $title, $sellerId, Carbon $date, string $field, bool $money = false): array
+    {
+        $goals = Goal::where('month', $date->month)
+            ->where('year', $date->year)
+            ->when($sellerId, function ($query, $sellerId) {
+                return $query->where('seller_id', $sellerId);
+            })
+            ->with('seller')
             ->get();
 
-        $clients = [];
-        foreach ($contracts as $contract) {
-            $clients[] = [
-                'name' => $contract->client(),
-                'seller' => $contract->seller ? $contract->seller->name : 'N/A',
-                'document' => $contract->document ?? $contract->group_name,
-                'amount' => number_format($contract->requested_amount, 2),
-                'date' => $contract->date->format('d/m/Y')
+        return [
+            'title' => $title,
+            'subtitle' => 'Metas registradas para ' . $date->format('m/Y'),
+            'headers' => ['Asesor', 'Meta'],
+            'rows' => $goals->map(function ($goal) use ($field, $money) {
+                $value = $goal->{$field};
+                return [
+                    $goal->seller ? $goal->seller->name : 'N/A',
+                    $money ? 'S/ ' . number_format($value, 0) : number_format($value, 0),
+                ];
+            })->values(),
+        ];
+    }
+
+    private function goalValue($sellerId, Carbon $date, string $field)
+    {
+        return (float) Goal::where('month', $date->month)
+            ->where('year', $date->year)
+            ->when($sellerId, function ($query, $sellerId) {
+                return $query->where('seller_id', $sellerId);
+            })
+            ->sum($field);
+    }
+
+    private function walletDetail(string $title, $sellerId, Carbon $date): array
+    {
+        $currentDebt = $this->quotaDebtValue($sellerId, $date);
+        $futurePayments = $this->futurePaymentValue($sellerId, $date);
+
+        return $this->summaryDetail($title, [
+            ['Deuda actual de cuotas activas al ' . $date->format('d/m/Y'), 'S/ ' . number_format($currentDebt, 1)],
+            ['Pagos posteriores a esa fecha', 'S/ ' . number_format($futurePayments, 1)],
+            ['Total cartera', 'S/ ' . number_format($currentDebt + $futurePayments, 1)],
+        ]);
+    }
+
+    private function walletValue($sellerId, Carbon $date, ?int $overdueDays = null): float
+    {
+        return $this->quotaDebtValue($sellerId, $date, $overdueDays) + $this->futurePaymentValue($sellerId, $date, $overdueDays);
+    }
+
+    private function portfolioOverdueReport($date): array
+    {
+        $date = Carbon::parse($date)->startOfDay();
+        $rows = [];
+        $totals = [
+            'wallet' => 0.0,
+            'mora_1_7' => 0.0,
+            'mora_8_30' => 0.0,
+            'mora_gt_7' => 0.0,
+            'mora_gt_60' => 0.0,
+            'mora_total' => 0.0,
+        ];
+
+        $sellers = User::seller()
+            ->active()
+            ->where('state', 0)
+            ->orderBy('name')
+            ->get();
+
+        foreach ($sellers as $seller) {
+            $wallet = $this->walletValue($seller->id, $date);
+            $mora1To7 = $this->overdueRangeValue($seller->id, $date, 1, 7);
+            $mora8To30 = $this->overdueRangeValue($seller->id, $date, 8, 30);
+            $moraGt7 = $this->walletValue($seller->id, $date, 7);
+            $moraGt60 = $this->walletValue($seller->id, $date, 60);
+            $moraTotal = $mora1To7 + $moraGt7;
+
+            $row = [
+                'seller' => $this->shortSellerName($seller->name),
+                'wallet' => $wallet,
+                'mora_1_7' => $mora1To7,
+                'mora_1_7_percent' => $this->ratio($mora1To7, $wallet),
+                'mora_8_30' => $mora8To30,
+                'mora_8_30_percent' => $this->ratio($mora8To30, $wallet),
+                'mora_gt_7' => $moraGt7,
+                'mora_gt_7_percent' => $this->ratio($moraGt7, $wallet),
+                'mora_gt_60' => $moraGt60,
+                'mora_gt_60_percent' => $this->ratio($moraGt60, $wallet),
+                'mora_total' => $moraTotal,
+                'mora_total_percent' => $this->ratio($moraTotal, $wallet),
             ];
+
+            $rows[] = $row;
+
+            foreach ($totals as $key => $value) {
+                $totals[$key] += $row[$key];
+            }
         }
 
-        return response()->json($clients);
+        $totals['mora_1_7_percent'] = $this->ratio($totals['mora_1_7'], $totals['wallet']);
+        $totals['mora_8_30_percent'] = $this->ratio($totals['mora_8_30'], $totals['wallet']);
+        $totals['mora_gt_7_percent'] = $this->ratio($totals['mora_gt_7'], $totals['wallet']);
+        $totals['mora_gt_60_percent'] = $this->ratio($totals['mora_gt_60'], $totals['wallet']);
+        $totals['mora_total_percent'] = $this->ratio($totals['mora_total'], $totals['wallet']);
+
+        return [
+            'date' => $date,
+            'rows' => $rows,
+            'totals' => $totals,
+        ];
+    }
+
+    private function overdueRangeValue($sellerId, Carbon $date, int $fromDays, int $toDays): float
+    {
+        $fromDate = $date->copy()->subDays($toDays);
+        $toDate = $date->copy()->subDays($fromDays);
+
+        return $this->quotaDebtRangeValue($sellerId, $date, $fromDate, $toDate)
+            + $this->futurePaymentRangeValue($sellerId, $date, $fromDate, $toDate);
+    }
+
+    private function quotaDebtRangeValue($sellerId, Carbon $date, Carbon $fromDate, Carbon $toDate): float
+    {
+        return (float) Quota::whereHas('contract', function ($query) use ($sellerId, $date) {
+                $query->active()
+                    ->where('approved', 1)
+                    ->when($sellerId, function ($q, $sellerId) {
+                        return $q->where('seller_id', $sellerId);
+                    })
+                    ->whereDate('date', '<=', $date);
+            })
+            ->whereDate('date', '>=', $fromDate)
+            ->whereDate('date', '<=', $toDate)
+            ->sum('debt');
+    }
+
+    private function futurePaymentRangeValue($sellerId, Carbon $date, Carbon $fromDate, Carbon $toDate): float
+    {
+        return (float) Payment::active()
+            ->whereDate('payments.date', '>', $date)
+            ->whereHas('quota.contract', function ($query) use ($sellerId, $date) {
+                $query->active()
+                    ->where('approved', 1)
+                    ->when($sellerId, function ($q, $sellerId) {
+                        return $q->where('seller_id', $sellerId);
+                    })
+                    ->whereDate('date', '<=', $date);
+            })
+            ->whereHas('quota', function ($q) use ($fromDate, $toDate) {
+                $q->whereDate('date', '>=', $fromDate)
+                    ->whereDate('date', '<=', $toDate);
+            })
+            ->sum('amount');
+    }
+
+    private function ratio($value, $total): float
+    {
+        return $total > 0 ? $value / $total : 0;
+    }
+
+    private function shortSellerName(string $name): string
+    {
+        $parts = preg_split('/\s+/', trim($name));
+
+        return strtoupper($parts[0] ?? $name);
+    }
+
+    private function quotaDebtValue($sellerId, Carbon $date, ?int $overdueDays = null): float
+    {
+        return (float) Quota::whereHas('contract', function ($query) use ($sellerId, $date) {
+                $query->active()
+                    ->where('approved', 1)
+                    ->when($sellerId, function ($q, $sellerId) {
+                        return $q->where('seller_id', $sellerId);
+                    })
+                    ->whereDate('date', '<=', $date);
+            })
+            ->when($overdueDays, function ($query, $days) use ($date) {
+                return $query->whereDate('date', '<', $date->copy()->subDays($days));
+            })
+            ->sum('debt');
+    }
+
+    private function futurePaymentValue($sellerId, Carbon $date, ?int $overdueDays = null): float
+    {
+        return (float) Payment::active()
+            ->whereDate('payments.date', '>', $date)
+            ->whereHas('quota.contract', function ($query) use ($sellerId, $date) {
+                $query->active()
+                    ->where('approved', 1)
+                    ->when($sellerId, function ($q, $sellerId) {
+                        return $q->where('seller_id', $sellerId);
+                    })
+                    ->whereDate('date', '<=', $date);
+            })
+            ->when($overdueDays, function ($query, $days) use ($date) {
+                return $query->whereHas('quota', function ($q) use ($date, $days) {
+                    $q->whereDate('date', '<', $date->copy()->subDays($days));
+                });
+            })
+            ->sum('amount');
     }
 }
