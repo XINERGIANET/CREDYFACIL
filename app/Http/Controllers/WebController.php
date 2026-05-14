@@ -16,6 +16,8 @@ use App\Models\Department;
 use App\Models\Province;
 use App\Models\District;
 use App\Models\Goal;
+use App\Models\AccountMovement;
+use App\Models\PaymentMethod;
 use App\Exports\PortfolioDailyReportExport;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -89,6 +91,8 @@ class WebController extends Controller
         $home_sales_1 = $home_sales_1 - $home_expenses_1 - $home_transfers_1_from + $home_transfers_1_to;
 
         /* Cuadre general */
+
+        $accountBalances = $this->accountBalances();
 
         $sales_1 = Payment::active()->where('payment_method_id', 1)->when($request->start_date_3, function($query, $start_date){
             return $query->whereDate('date', '>=', $start_date);
@@ -493,7 +497,62 @@ class WebController extends Controller
         $portfolioOverdueReport = $this->portfolioOverdueReport($portfolioReportDate);
 
         return view('index', compact(
-                'today_payments', 'today_projected', 'today_real', 'active_clients', 'due_clients', 'home_sales_1', 'sales_1', 'sales_2', 'sales_3', 'sales_4', 'sales_5', 'sales_6', 'total', 'due_total', 'wallet_total', 'requested_amount', 'expenses', 'sales_totals_1', 'expenses_totals_1', 'sales_totals_2', 'expenses_totals_2', 'sellers','seller_wallet','today_timely_payments','due_quotas','portfolioReport','portfolioOverdueReport'));
+                'today_payments', 'today_projected', 'today_real', 'active_clients', 'due_clients', 'home_sales_1', 'sales_1', 'sales_2', 'sales_3', 'sales_4', 'sales_5', 'sales_6', 'total', 'due_total', 'wallet_total', 'requested_amount', 'expenses', 'sales_totals_1', 'expenses_totals_1', 'sales_totals_2', 'expenses_totals_2', 'sellers','seller_wallet','today_timely_payments','due_quotas','portfolioReport','portfolioOverdueReport','accountBalances'));
+    }
+
+    public function accountBalances()
+    {
+        return PaymentMethod::active()
+            ->get()
+            ->map(function ($paymentMethod) {
+                $payments = (float) Payment::active()
+                    ->where('payment_method_id', $paymentMethod->id)
+                    ->sum('amount');
+
+                $expenses = (float) Expense::active()
+                    ->whereHas('expensePayments', function ($query) use ($paymentMethod) {
+                        return $query->where('payment_method_id', $paymentMethod->id);
+                    })
+                    ->with('expensePayments')
+                    ->get()
+                    ->sum(function ($expense) use ($paymentMethod) {
+                        return $expense->expensePayments
+                            ->where('payment_method_id', $paymentMethod->id)
+                            ->sum('amount');
+                    });
+
+                $transfersOut = (float) Transfer::active()
+                    ->where('type', 'payment_method')
+                    ->where('from_payment_method_id', $paymentMethod->id)
+                    ->sum('amount');
+
+                $transfersIn = (float) Transfer::active()
+                    ->where('type', 'payment_method')
+                    ->where('to_payment_method_id', $paymentMethod->id)
+                    ->sum('amount');
+
+                $manualIn = (float) AccountMovement::active()
+                    ->where('payment_method_id', $paymentMethod->id)
+                    ->where('type', 'income')
+                    ->sum('amount');
+
+                $manualOut = (float) AccountMovement::active()
+                    ->where('payment_method_id', $paymentMethod->id)
+                    ->where('type', 'expense')
+                    ->sum('amount');
+
+                return [
+                    'id' => $paymentMethod->id,
+                    'name' => $paymentMethod->name,
+                    'balance' => $payments - $expenses - $transfersOut + $transfersIn + $manualIn - $manualOut,
+                    'payments' => $payments,
+                    'expenses' => $expenses,
+                    'transfers_in' => $transfersIn,
+                    'transfers_out' => $transfersOut,
+                    'manual_in' => $manualIn,
+                    'manual_out' => $manualOut,
+                ];
+            });
     }
 
     public function apiReniec(Request $request){

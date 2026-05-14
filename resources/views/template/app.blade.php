@@ -186,6 +186,16 @@
                             @endif
                         @if (auth()->user()->hasRole('admin'))
                             <li class="nav-item">
+                                <a class="nav-link" href="{{ route('account-movements.index') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-wallet icon"></i>
+                                    </span>
+                                    <span class="nav-link-title">
+                                        Caja y cuentas
+                                    </span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link" href="{{ route('transfers.index') }}">
                                     <span class="nav-link-icon d-md-none d-lg-inline-block">
                                         <i class="ti ti-truck icon"></i>

@@ -15,6 +15,7 @@ use App\Http\Controllers\TransferController;
 use App\Http\Controllers\InterestController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\GoalController;
+use App\Http\Controllers\AccountMovementController;
 
 
 Route::get('optimize', function () {
@@ -85,6 +86,7 @@ Route::middleware('role:admin')->group(function () {
 	Route::resource('sellers', SellerController::class);
 
 	Route::resource('transfers', TransferController::class);
+	Route::resource('account-movements', AccountMovementController::class)->except(['show', 'create']);
 
 	Route::get('interests/monthly', [InterestController::class, 'index'])->name('interests.monthly');
 

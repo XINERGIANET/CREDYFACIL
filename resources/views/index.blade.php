@@ -98,11 +98,15 @@
 					Dinero en cuentas
 				</h5>
 				<ul>
-					<li class="fs-3 fw-semibold">Efectivo: S/{{ number_format($sales_1, 2) }}</li>
-					<li class="fs-3 fw-semibold">BCP: S/{{ number_format($sales_2, 2) }}</li>
-					<li class="fs-3 fw-semibold">Yape: S/{{ number_format($sales_3, 2) }}</li>
-					
+					@foreach($accountBalances as $accountBalance)
+					<li class="fs-3 fw-semibold">{{ $accountBalance['name'] }}: S/{{ number_format($accountBalance['balance'], 2) }}</li>
+					@endforeach
 				</ul>
+				@if(auth()->user()->hasRole('admin'))
+				<a href="{{ route('account-movements.index') }}" class="btn btn-sm btn-primary">
+					<i class="ti ti-cash icon"></i> Cuadrar cuentas
+				</a>
+				@endif
 			</div>
 		</div>
 	</div>
