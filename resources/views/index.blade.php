@@ -392,17 +392,17 @@
                 @foreach($portfolioOverdueReport['rows'] as $row)
                     <tr>
                         <td class="fw-bold text-start">{{ $row['seller'] }}</td>
-                        <td class="bg-yellow-report fw-bold text-nowrap">S/ {{ number_format($row['wallet'], 1) }}</td>
-                        <td class="bg-grey-report fw-bold text-nowrap">{{ $overdueMoney($row['mora_1_7']) }}</td>
-                        <td class="fw-bold {{ $row['mora_1_7_percent'] > 0 ? 'bg-overdue-alert' : '' }}">{{ $overduePercent($row['mora_1_7_percent']) }}</td>
-                        <td class="bg-grey-report fw-bold text-nowrap">{{ $overdueMoney($row['mora_8_30']) }}</td>
-                        <td class="fw-bold {{ $row['mora_8_30_percent'] > 0 ? 'bg-overdue-alert' : '' }}">{{ $overduePercent($row['mora_8_30_percent']) }}</td>
-                        <td class="bg-grey-report fw-bold text-nowrap">{{ $overdueMoney($row['mora_gt_7']) }}</td>
-                        <td class="fw-bold {{ $row['mora_gt_7_percent'] > 0 ? 'bg-overdue-alert' : '' }}">{{ $overduePercent($row['mora_gt_7_percent'], 2) }}</td>
-                        <td class="bg-grey-report fw-bold text-nowrap">{{ $overdueMoney($row['mora_gt_60']) }}</td>
-                        <td class="fw-bold {{ $row['mora_gt_60_percent'] > 0 ? 'bg-overdue-alert' : '' }}">{{ $overduePercent($row['mora_gt_60_percent']) }}</td>
-                        <td class="bg-grey-report fw-bold text-nowrap">{{ $overdueMoney($row['mora_total']) }}</td>
-                        <td class="fw-bold {{ $row['mora_total_percent'] > 0 ? 'bg-overdue-alert' : '' }}">{{ $overduePercent($row['mora_total_percent']) }}</td>
+                        <td class="bg-yellow-report fw-bold text-nowrap portfolio-detail-cell" data-metric="current_wallet" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">S/ {{ number_format($row['wallet'], 1) }}</td>
+                        <td class="bg-grey-report fw-bold text-nowrap portfolio-detail-cell" data-metric="mora_1_7" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overdueMoney($row['mora_1_7']) }}</td>
+                        <td class="fw-bold portfolio-detail-cell {{ $row['mora_1_7_percent'] > 0 ? 'bg-overdue-alert' : '' }}" data-metric="mora_1_7" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overduePercent($row['mora_1_7_percent']) }}</td>
+                        <td class="bg-grey-report fw-bold text-nowrap portfolio-detail-cell" data-metric="mora_8_30" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overdueMoney($row['mora_8_30']) }}</td>
+                        <td class="fw-bold portfolio-detail-cell {{ $row['mora_8_30_percent'] > 0 ? 'bg-overdue-alert' : '' }}" data-metric="mora_8_30" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overduePercent($row['mora_8_30_percent']) }}</td>
+                        <td class="bg-grey-report fw-bold text-nowrap portfolio-detail-cell" data-metric="mora_gt_7" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overdueMoney($row['mora_gt_7']) }}</td>
+                        <td class="fw-bold portfolio-detail-cell {{ $row['mora_gt_7_percent'] > 0 ? 'bg-overdue-alert' : '' }}" data-metric="mora_gt_7" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overduePercent($row['mora_gt_7_percent'], 2) }}</td>
+                        <td class="bg-grey-report fw-bold text-nowrap portfolio-detail-cell" data-metric="mora_gt_60" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overdueMoney($row['mora_gt_60']) }}</td>
+                        <td class="fw-bold portfolio-detail-cell {{ $row['mora_gt_60_percent'] > 0 ? 'bg-overdue-alert' : '' }}" data-metric="mora_gt_60" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overduePercent($row['mora_gt_60_percent']) }}</td>
+                        <td class="bg-grey-report fw-bold text-nowrap portfolio-detail-cell" data-metric="mora_total" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overdueMoney($row['mora_total']) }}</td>
+                        <td class="fw-bold portfolio-detail-cell {{ $row['mora_total_percent'] > 0 ? 'bg-overdue-alert' : '' }}" data-metric="mora_total" data-seller-id="{{ $row['seller_id'] }}" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overduePercent($row['mora_total_percent']) }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -410,17 +410,17 @@
                 @php $overdueTotals = $portfolioOverdueReport['totals']; @endphp
                 <tr class="bg-total-report">
                     <td class="fw-bold text-start">CREDYFACIL</td>
-                    <td class="fw-bold text-nowrap">{{ number_format($overdueTotals['wallet'], 1) }}</td>
-                    <td class="fw-bold text-nowrap">S/ {{ number_format($overdueTotals['mora_1_7'], 1) }}</td>
-                    <td class="fw-bold">{{ $overduePercent($overdueTotals['mora_1_7_percent'], 2) }}</td>
-                    <td class="fw-bold text-nowrap">S/ {{ number_format($overdueTotals['mora_8_30'], 1) }}</td>
-                    <td class="fw-bold">{{ $overduePercent($overdueTotals['mora_8_30_percent'], 2) }}</td>
-                    <td class="fw-bold text-nowrap">S/ {{ number_format($overdueTotals['mora_gt_7'], 1) }}</td>
-                    <td class="fw-bold">{{ $overduePercent($overdueTotals['mora_gt_7_percent'], 2) }}</td>
-                    <td class="fw-bold text-nowrap">S/ {{ number_format($overdueTotals['mora_gt_60'], 1) }}</td>
-                    <td class="fw-bold">{{ $overduePercent($overdueTotals['mora_gt_60_percent'], 2) }}</td>
-                    <td class="fw-bold text-nowrap">S/ {{ number_format($overdueTotals['mora_total'], 1) }}</td>
-                    <td class="fw-bold">{{ $overduePercent($overdueTotals['mora_total_percent'], 2) }}</td>
+                    <td class="fw-bold text-nowrap portfolio-detail-cell" data-metric="current_wallet" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ number_format($overdueTotals['wallet'], 1) }}</td>
+                    <td class="fw-bold text-nowrap portfolio-detail-cell" data-metric="mora_1_7" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">S/ {{ number_format($overdueTotals['mora_1_7'], 1) }}</td>
+                    <td class="fw-bold portfolio-detail-cell" data-metric="mora_1_7" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overduePercent($overdueTotals['mora_1_7_percent'], 2) }}</td>
+                    <td class="fw-bold text-nowrap portfolio-detail-cell" data-metric="mora_8_30" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">S/ {{ number_format($overdueTotals['mora_8_30'], 1) }}</td>
+                    <td class="fw-bold portfolio-detail-cell" data-metric="mora_8_30" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overduePercent($overdueTotals['mora_8_30_percent'], 2) }}</td>
+                    <td class="fw-bold text-nowrap portfolio-detail-cell" data-metric="mora_gt_7" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">S/ {{ number_format($overdueTotals['mora_gt_7'], 1) }}</td>
+                    <td class="fw-bold portfolio-detail-cell" data-metric="mora_gt_7" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overduePercent($overdueTotals['mora_gt_7_percent'], 2) }}</td>
+                    <td class="fw-bold text-nowrap portfolio-detail-cell" data-metric="mora_gt_60" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">S/ {{ number_format($overdueTotals['mora_gt_60'], 1) }}</td>
+                    <td class="fw-bold portfolio-detail-cell" data-metric="mora_gt_60" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overduePercent($overdueTotals['mora_gt_60_percent'], 2) }}</td>
+                    <td class="fw-bold text-nowrap portfolio-detail-cell" data-metric="mora_total" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">S/ {{ number_format($overdueTotals['mora_total'], 1) }}</td>
+                    <td class="fw-bold portfolio-detail-cell" data-metric="mora_total" data-seller-id="" data-date="{{ $overdueDate->format('Y-m-d') }}" title="Ver detalle">{{ $overduePercent($overdueTotals['mora_total_percent'], 2) }}</td>
                 </tr>
             </tfoot>
         </table>

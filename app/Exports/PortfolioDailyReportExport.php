@@ -206,9 +206,15 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
     {
         $limit = $date->copy()->subDays($days);
 
-        return $this->quotaDebtAsOf($sellerId, $date, function ($query) use ($limit) {
-            $query->whereDate('quotas.date', '<', $limit);
-        });
+        return (float) Quota::whereHas('contract', function ($query) use ($sellerId, $date) {
+                $query->active()
+                    ->where('approved', 1)
+                    ->where('seller_id', $sellerId)
+                    ->whereDate('date', '<=', $date);
+            })
+            ->where('paid', 0)
+            ->whereDate('date', '<', $limit)
+            ->sum('debt');
     }
 
     private function quotaDebtAsOf($sellerId, Carbon $date, $quotaFilter = null): float

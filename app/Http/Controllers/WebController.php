@@ -661,12 +661,22 @@ class WebController extends Controller
                 ]));
             case 'overdue_percent':
                 $wallet = $this->walletValue($sellerId, $date);
-                $overdue = $this->walletValue($sellerId, $date, 7);
+                $overdue = $this->quotaDebtValue($sellerId, $date, 7);
                 return response()->json($this->summaryDetail('MORA >7', [
                     ['Deuda vencida mayor a 7 dias', 'S/ ' . number_format($overdue, 1)],
                     ['Avance cartera', 'S/ ' . number_format($wallet, 1)],
                     ['Resultado', $wallet > 0 ? number_format(($overdue / $wallet) * 100, 2) . '%' : '-'],
                 ]));
+            case 'mora_1_7':
+                return response()->json($this->overdueQuotasDetail('MORA 1 a 7', $sellerId, $date, 1, 7));
+            case 'mora_8_30':
+                return response()->json($this->overdueQuotasDetail('MORA 8 a 30', $sellerId, $date, 8, 30));
+            case 'mora_gt_7':
+                return response()->json($this->overdueQuotasDetail('MORA >7', $sellerId, $date, 8));
+            case 'mora_gt_60':
+                return response()->json($this->overdueQuotasDetail('MORA >60', $sellerId, $date, 61));
+            case 'mora_total':
+                return response()->json($this->overdueQuotasDetail('MORA TOTAL', $sellerId, $date, 1));
             case 'previous_disbursement':
                 return response()->json($this->contractsDetail(
                     'DESEMBOLSO MES PASADO',
@@ -915,8 +925,51 @@ class WebController extends Controller
         ]);
     }
 
+    private function overdueQuotasDetail(string $title, $sellerId, Carbon $date, int $fromDays, ?int $toDays = null): array
+    {
+        $quotas = Quota::active()
+            ->whereHas('contract', function ($query) use ($sellerId, $date) {
+                $query->where('approved', 1)
+                    ->when($sellerId, function ($q, $sellerId) {
+                        return $q->where('seller_id', $sellerId);
+                    })
+                    ->whereDate('date', '<=', $date);
+            })
+            ->where('paid', 0)
+            ->whereDate('date', '<', $date)
+            ->whereDate('date', '<=', $date->copy()->subDays($fromDays))
+            ->when($toDays, function ($query, $toDays) use ($date) {
+                return $query->whereDate('date', '>=', $date->copy()->subDays($toDays));
+            })
+            ->with('contract.seller')
+            ->orderBy('date')
+            ->get();
+
+        return [
+            'title' => $title,
+            'subtitle' => 'Cuotas impagas vencidas al ' . $date->format('d/m/Y')
+                . '. Total: S/ ' . number_format($quotas->sum('debt'), 2),
+            'headers' => ['Cliente', 'Asesor', 'Numero de cuota', 'Monto', 'Saldo', 'Fecha de pago', 'Dias de mora'],
+            'rows' => $quotas->map(function ($quota) use ($date) {
+                return [
+                    optional($quota->contract)->client(),
+                    optional(optional($quota->contract)->seller)->name,
+                    $quota->number,
+                    'S/ ' . number_format($quota->amount, 2),
+                    'S/ ' . number_format($quota->debt, 2),
+                    optional($quota->date)->format('d/m/Y'),
+                    optional($quota->date)->diffInDays($date),
+                ];
+            })->values(),
+        ];
+    }
+
     private function walletValue($sellerId, Carbon $date, ?int $overdueDays = null): float
     {
+        if ($overdueDays !== null) {
+            return $this->quotaDebtValue($sellerId, $date, $overdueDays);
+        }
+
         return $this->quotaDebtValue($sellerId, $date, $overdueDays) + $this->futurePaymentValue($sellerId, $date, $overdueDays);
     }
 
@@ -948,6 +1001,7 @@ class WebController extends Controller
             $moraTotal = $mora1To7 + $moraGt7;
 
             $row = [
+                'seller_id' => $seller->id,
                 'seller' => $this->shortSellerName($seller->name),
                 'wallet' => $wallet,
                 'mora_1_7' => $mora1To7,
@@ -987,8 +1041,7 @@ class WebController extends Controller
         $fromDate = $date->copy()->subDays($toDays);
         $toDate = $date->copy()->subDays($fromDays);
 
-        return $this->quotaDebtRangeValue($sellerId, $date, $fromDate, $toDate)
-            + $this->futurePaymentRangeValue($sellerId, $date, $fromDate, $toDate);
+        return $this->quotaDebtRangeValue($sellerId, $date, $fromDate, $toDate);
     }
 
     private function quotaDebtRangeValue($sellerId, Carbon $date, Carbon $fromDate, Carbon $toDate): float
@@ -1001,6 +1054,7 @@ class WebController extends Controller
                     })
                     ->whereDate('date', '<=', $date);
             })
+            ->where('paid', 0)
             ->whereDate('date', '>=', $fromDate)
             ->whereDate('date', '<=', $toDate)
             ->sum('debt');
@@ -1048,7 +1102,8 @@ class WebController extends Controller
                     ->whereDate('date', '<=', $date);
             })
             ->when($overdueDays, function ($query, $days) use ($date) {
-                return $query->whereDate('date', '<', $date->copy()->subDays($days));
+                return $query->where('paid', 0)
+                    ->whereDate('date', '<', $date->copy()->subDays($days));
             })
             ->sum('debt');
     }
