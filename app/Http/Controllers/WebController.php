@@ -1101,9 +1101,9 @@ class WebController extends Controller
                     })
                     ->whereDate('date', '<=', $date);
             })
+            ->where('paid', 0)    
             ->when($overdueDays, function ($query, $days) use ($date) {
-                return $query->where('paid', 0)
-                    ->whereDate('date', '<', $date->copy()->subDays($days));
+                return $query->whereDate('date', '<', $date->copy()->subDays($days));
             })
             ->sum('debt');
     }
