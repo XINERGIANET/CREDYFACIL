@@ -94,9 +94,9 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
             "INIC. MES N°\nCLIENTES",
             "AVANCE N°\nCLIENT. AL DIA",
             "CRECIMIENTO\nN° CLIENTES",
-            'NUEVOS',
             'META DE CLIENTES',
-            '%',            
+            '%',       
+            'NUEVOS',
             "META DE\nNUEVOS",
             '%',
             "INIC. MES\nCARTERA",
@@ -139,9 +139,9 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
             $initialClients,
             $currentClients,
             $clientGrowth,
-            $newClients,
             $goals['clients'],
-            $this->percent($currentClients, $goals['clients']),
+            $this->percent($clientGrowth, $goals['clients']),
+            $newClients,
             $goals['new'],
             $this->percent($newClients, $goals['new']),
             $initialWallet,
@@ -313,7 +313,7 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
 
     private function addTotals(array &$totals, array $row): void
     {
-        foreach ([1, 2, 3, 4, 5, 7, 9, 10, 11, 13, 14, 15, 16] as $index) {
+        foreach ([1, 2, 3, 4, 6, 7, 9, 10, 11, 13, 14, 15, 16] as $index) {
             $totals[$index] += (float) $row[$index];
         }
     }

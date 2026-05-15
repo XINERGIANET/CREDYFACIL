@@ -643,13 +643,18 @@ class WebController extends Controller
                 ));
 
             case 'client_percent':
+                $initialDate = $date->copy()->startOfMonth()->subDay();
                 $currentClients = $this->activeContractsAsOf($sellerId, $date)->count();
+                $initialClients = $this->activeContractsAsOf($sellerId, $initialDate)->count();
+                $clientGrowth = $currentClients - $initialClients;
                 $clientGoal = $this->goalValue($sellerId, $date, 'clients');
                 return response()->json($this->summaryDetail('AVANCE CLIENTES %', [
                     ['Clientes al día', $currentClients],
+                    ['Clientes inicio de mes', $initialClients],
+                    ['Crecimiento', $clientGrowth],
                     ['Meta de clientes', $clientGoal],
                     ['Resultado', $clientGoal > 0
-                        ? number_format(($currentClients / $clientGoal) * 100, 2) . '%'
+                        ? number_format(($clientGrowth / $clientGoal) * 100, 2) . '%'
                         : '-'],
                 ]));
 
