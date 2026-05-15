@@ -637,6 +637,22 @@ class WebController extends Controller
                     $this->newClientContracts($sellerId, $monthStart, $date),
                     'Clientes nuevos desde ' . $monthStart->format('d/m/Y') . ' hasta ' . $date->format('d/m/Y')
                 ));
+            case 'client_goal':
+                return response()->json($this->goalDetail(
+                    'META DE CLIENTES', $sellerId, $date, 'clients'
+                ));
+
+            case 'client_percent':
+                $currentClients = $this->activeContractsAsOf($sellerId, $date)->count();
+                $clientGoal = $this->goalValue($sellerId, $date, 'clients');
+                return response()->json($this->summaryDetail('AVANCE CLIENTES %', [
+                    ['Clientes al día', $currentClients],
+                    ['Meta de clientes', $clientGoal],
+                    ['Resultado', $clientGoal > 0
+                        ? number_format(($currentClients / $clientGoal) * 100, 2) . '%'
+                        : '-'],
+                ]));
+
             case 'new_goal':
                 return response()->json($this->goalDetail('META DE NUEVOS', $sellerId, $date, 'new_clients'));
             case 'new_percent':

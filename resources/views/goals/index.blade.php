@@ -58,6 +58,7 @@
                 <thead>
                     <tr>
                         <th>Asesor</th>
+                        <th style="width: 200px;">Meta Clientes</th>
                         <th style="width: 200px;">Meta Nuevos</th>
                         <th style="width: 200px;">Meta Desembolso</th>
                     </tr>
@@ -69,6 +70,10 @@
                         @endphp
                         <tr>
                             <td>{{ $seller->name }}</td>
+                            <td>
+                                <input type="number" name="goals[{{ $seller->id }}][clients]" 
+                                    class="form-control" value="{{ $goal ? $goal->clients : 0 }}" min="0">
+                            </td>
                             <td>
                                 <input type="number" name="goals[{{ $seller->id }}][new_clients]" 
                                     class="form-control" value="{{ $goal ? $goal->new_clients : 0 }}" min="0">

@@ -291,6 +291,8 @@
                     <th>AVANCE N°<br>CLIENT. AL DIA</th>
                     <th>CRECIM.<br>N° CLIENTES</th>
                     <th>NUEVOS</th>
+					<th class="bg-yellow-report">META DE<br>CLIENTES</th>
+					<th class="bg-green-report">%</th>
                     <th class="bg-yellow-report">META DE<br>NUEVOS</th>
                     <th class="bg-green-report">%</th>
                     <th>INIC. MES<br>CARTERA</th>
@@ -312,23 +314,25 @@
                         $row = $item['data'];
                     @endphp
                     <tr>
-                        <td class="fw-bold">{{ $row[0] }}</td>
-                        <td class="bg-grey-report portfolio-detail-cell" data-metric="initial_clients" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[1], 0) }}</td>
-                        <td class="portfolio-detail-cell" data-metric="current_clients" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[2], 0) }}</td>
-                        <td class="portfolio-detail-cell" data-metric="client_growth" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[3], 0) }}</td>
-                        <td class="bg-grey-report portfolio-detail-cell" data-metric="new_clients" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[4], 0) }}</td>
-                        <td class="bg-yellow-report portfolio-detail-cell" data-metric="new_goal" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[5], 0) }}</td>
-                        <td class="bg-green-report fw-semibold portfolio-detail-cell" data-metric="new_percent" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $row[6] ? number_format($row[6] * 100, 2) . '%' : '-' }}</td>
-                        <td class="bg-grey-report portfolio-detail-cell" data-metric="initial_wallet" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[7], 1) }}</td>
-                        <td class="portfolio-detail-cell" data-metric="current_wallet" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[8], 1) }}</td>
-                        <td class="portfolio-detail-cell" data-metric="wallet_growth" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[9], 1) }}</td>
-                        <td class="bg-red-report portfolio-detail-cell" data-metric="overdue_percent" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $row[10] ? number_format($row[10] * 100, 2) . '%' : '-' }}</td>
-                        <td class="bg-grey-report portfolio-detail-cell" data-metric="previous_disbursement" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[11], 1) }}</td>
-                        <td class="bg-grey-report portfolio-detail-cell" data-metric="previous_operations" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[12], 0) }}</td>
-                        <td class="portfolio-detail-cell" data-metric="current_disbursement" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[13], 0) }}</td>
-                        <td class="portfolio-detail-cell" data-metric="current_operations" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[14], 0) }}</td>
-                        <td class="bg-yellow-report portfolio-detail-cell" data-metric="disbursement_goal" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[15], 0) }}</td>
-                        <td class="bg-green-report fw-semibold portfolio-detail-cell" data-metric="disbursement_percent" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $row[16] ? number_format($row[16] * 100, 2) . '%' : '-' }}</td>
+						<td class="fw-bold">{{ $row[0] }}</td>
+						<td class="bg-grey-report portfolio-detail-cell" data-metric="initial_clients" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[1], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="current_clients" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[2], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="client_growth" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[3], 0) }}</td>
+						<td class="bg-grey-report portfolio-detail-cell" data-metric="new_clients" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[4], 0) }}</td>
+						<td class="bg-yellow-report portfolio-detail-cell" data-metric="client_goal" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[5], 0) }}</td>
+						<td class="bg-green-report fw-semibold portfolio-detail-cell" data-metric="client_percent" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $row[6] ? number_format($row[6] * 100, 2) . '%' : '-' }}</td>
+						<td class="bg-yellow-report portfolio-detail-cell" data-metric="new_goal" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[7], 0) }}</td>
+						<td class="bg-green-report fw-semibold portfolio-detail-cell" data-metric="new_percent" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $row[8] ? number_format($row[8] * 100, 2) . '%' : '-' }}</td>
+						<td class="bg-grey-report portfolio-detail-cell" data-metric="initial_wallet" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[9], 1) }}</td>
+						<td class="portfolio-detail-cell" data-metric="current_wallet" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[10], 1) }}</td>
+						<td class="portfolio-detail-cell" data-metric="wallet_growth" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[11], 1) }}</td>
+						<td class="bg-red-report portfolio-detail-cell" data-metric="overdue_percent" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $row[12] ? number_format($row[12] * 100, 2) . '%' : '-' }}</td>
+						<td class="bg-grey-report portfolio-detail-cell" data-metric="previous_disbursement" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[13], 1) }}</td>
+						<td class="bg-grey-report portfolio-detail-cell" data-metric="previous_operations" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[14], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="current_disbursement" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[15], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="current_operations" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($row[16], 0) }}</td>
+						<td class="bg-yellow-report portfolio-detail-cell" data-metric="disbursement_goal" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($row[17], 0) }}</td>
+						<td class="bg-green-report fw-semibold portfolio-detail-cell" data-metric="disbursement_percent" data-seller-id="{{ $sellerId }}" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $row[18] ? number_format($row[18] * 100, 2) . '%' : '-' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -336,22 +340,25 @@
                 <tr class="bg-total-report">
                     @php $totals = $portfolioReport['totals']; @endphp
                     <td>{{ $totals[0] }}</td>
-                    <td class="portfolio-detail-cell" data-metric="initial_clients" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[1], 0) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="current_clients" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[2], 0) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="client_growth" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[3], 0) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="new_clients" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[4], 0) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="new_goal" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[5], 0) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="new_percent" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $totals[6] ? number_format($totals[6] * 100, 2) . '%' : '-' }}</td>
-                    <td class="portfolio-detail-cell" data-metric="initial_wallet" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[7], 1) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="current_wallet" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[8], 1) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="wallet_growth" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[9], 1) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="overdue_percent" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $totals[10] ? number_format($totals[10] * 100, 2) . '%' : '-' }}</td>
-                    <td class="portfolio-detail-cell" data-metric="previous_disbursement" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[11], 1) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="previous_operations" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[12], 0) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="current_disbursement" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[13], 0) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="current_operations" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[14], 0) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="disbursement_goal" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[15], 0) }}</td>
-                    <td class="portfolio-detail-cell" data-metric="disbursement_percent" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $totals[16] ? number_format($totals[16] * 100, 2) . '%' : '-' }}</td>
+						<td class="portfolio-detail-cell" data-metric="initial_clients" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[1], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="current_clients" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[2], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="client_growth" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[3], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="new_clients" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[4], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="client_goal" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[5], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="client_percent" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $totals[6] ? number_format($totals[6] * 100, 2) . '%' : '-' }}</td>
+						<td class="portfolio-detail-cell" data-metric="new_goal" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[7], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="new_percent" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $totals[8] ? number_format($totals[8] * 100, 2) . '%' : '-' }}</td>
+						<td class="portfolio-detail-cell" data-metric="initial_wallet" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[9], 1) }}</td>
+						<td class="portfolio-detail-cell" data-metric="current_wallet" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[10], 1) }}</td>
+						<td class="portfolio-detail-cell" data-metric="wallet_growth" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[11], 1) }}</td>
+						<td class="portfolio-detail-cell" data-metric="overdue_percent" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $totals[12] ? number_format($totals[12] * 100, 2) . '%' : '-' }}</td>
+						<td class="portfolio-detail-cell" data-metric="previous_disbursement" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[13], 1) }}</td>
+						<td class="portfolio-detail-cell" data-metric="previous_operations" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[14], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="current_disbursement" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[15], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="current_operations" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ number_format($totals[16], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="disbursement_goal" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">S/{{ number_format($totals[17], 0) }}</td>
+						<td class="portfolio-detail-cell" data-metric="disbursement_percent" data-seller-id="" data-date="{{ \Carbon\Carbon::parse($portfolioDate)->format('Y-m-d') }}" title="Ver detalle">{{ $totals[18] ? number_format($totals[18] * 100, 2) . '%' : '-' }}</td>
+					</tr>
                 </tr>
             </tfoot>
         </table>
