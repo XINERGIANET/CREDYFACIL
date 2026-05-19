@@ -90,28 +90,27 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
     private function headings(): array
     {
         return [
-            '',
-            "INIC. MES N°\nCLIENTES",
+            'ASESOR',
+            "INIC. MES\nN° CLIENTES",
             "AVANCE N°\nCLIENT. AL DIA",
-            "CRECIMIENTO\nN° CLIENTES",
-            'META DE CLIENTES',
-            '%',       
+            "CRECIM.\nN° CLIENTES",
+            "META DE\nCLIENTES",
+            '%',
             'NUEVOS',
             "META DE\nNUEVOS",
             '%',
             "INIC. MES\nCARTERA",
-            'AVANCE CARTERA',
-            'CREC. CARTERA',
+            "AVANCE\nCARTERA",
+            "CREC.\nCARTERA",
             'MORA >7',
-            "DESEMBOLSO\nMES PASADO",
+            "DESEMB.\nMES PASADO",
             "N° OPER.\nMES PASADO",
-            'AVANCE DE DESEMBOLSOS',
+            "AVANCE\nDESEMB.",
             "N° DE\nOPER.",
             "META\nMES",
-            "AVANCE\nDESEMBOLSOS %",
+            "AVANCE %",
         ];
     }
-
     private function sellerRow(User $seller): array
     {
         $monthStart = $this->reportDate->copy()->startOfMonth();
@@ -335,9 +334,9 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
             $totals[11],                                            // CREC. CARTERA
             $this->percent($this->totalOverdueDebt(), $totals[10]), // MORA >7
             $totals[13],                                            // DESEMB. MES PASADO
-            $totals[14],                                            // N° OPER. MES PASADO
+            $totals[14],                                            // NÂ° OPER. MES PASADO
             $totals[15],                                            // AVANCE DESEMBOLSOS
-            $totals[16],                                            // N° OPER.
+            $totals[16],                                            // NÂ° OPER.
             $totals[17],                                            // META MES
             $this->percent($totals[15], $totals[17]),               // AVANCE DESEMB. %
         ];
@@ -364,9 +363,11 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
                 $lastColumn = Coordinate::stringFromColumnIndex(19);
 
                 $sheet->mergeCells('A1:' . $lastColumn . '1');
-                $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
-                $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('00E5E5');
+                $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setARGB('00E5E5');
+                $sheet->getStyle('A1')->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                    ->setVertical(Alignment::VERTICAL_CENTER);
+                $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('152230');
 
                 $sheet->getStyle('A2:' . $lastColumn . '2')->getFont()->setBold(true)->setSize(8);
                 $sheet->getStyle('A2:' . $lastColumn . '2')->getAlignment()
@@ -375,21 +376,21 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
                     ->setWrapText(true);
                 $sheet->getStyle('A2:' . $lastColumn . '2')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('00E5E5');
 
-                foreach (['F', 'H', 'R'] as $column) {
+                foreach (['E', 'H', 'R'] as $column) {
                     $sheet->getStyle($column . '2:' . $column . $lastRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFF00');
                 }
 
-                foreach (['G', 'I', 'S'] as $column) {
+                foreach (['F', 'I', 'S'] as $column) {
                     $sheet->getStyle($column . '2:' . $column . $lastRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('00F000');
                 }
 
-                foreach (['B', 'E', 'J', 'O'] as $column) {
+                foreach (['B', 'G', 'J', 'N', 'O'] as $column) {
                     $sheet->getStyle($column . '3:' . $column . ($lastRow - 1))->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('808080');
                     $sheet->getStyle($column . '3:' . $column . ($lastRow - 1))->getFont()->getColor()->setARGB('FFFFFF');
                 }
 
                 $sheet->getStyle('M2:M' . $lastRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF0000');
-                $sheet->getStyle('M2:M' . $lastRow)->getFont()->setBold(true);
+                $sheet->getStyle('M2:M' . $lastRow)->getFont()->setBold(true)->getColor()->setARGB('FFFFFF');
 
                 $sheet->getStyle('A' . $lastRow . ':' . $lastColumn . $lastRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('00F000');
                 $sheet->getStyle('A' . $lastRow . ':' . $lastColumn . $lastRow)->getFont()->setBold(true);
@@ -400,11 +401,12 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
                     ->setVertical(Alignment::VERTICAL_CENTER);
 
                 $sheet->getStyle('J3:L' . $lastRow)->getNumberFormat()->setFormatCode('"S/" #,##0.0');                      // INIC.MES, AVANCE, CREC. CARTERA
-                $sheet->getStyle('N3:N' . $lastRow)->getNumberFormat()->setFormatCode('"S/" #,##0');                        // DESEMB. MES PASADO
+                $sheet->getStyle('N3:N' . $lastRow)->getNumberFormat()->setFormatCode('"S/" #,##0.0');                      // DESEMB. MES PASADO
                 $sheet->getStyle('P3:P' . $lastRow)->getNumberFormat()->setFormatCode('"S/" #,##0');                        // AVANCE DESEMBOLSOS
-                $sheet->getStyle('O3:O' . $lastRow)->getNumberFormat()->setFormatCode('#,##0');                             // N° OPER. MES PASADO
-                $sheet->getStyle('Q3:Q' . $lastRow)->getNumberFormat()->setFormatCode('#,##0');                             // N° OPER.
-                $sheet->getStyle('G3:G' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);  // % clientes
+                $sheet->getStyle('R3:R' . $lastRow)->getNumberFormat()->setFormatCode('"S/" #,##0');                        // META MES
+                $sheet->getStyle('O3:O' . $lastRow)->getNumberFormat()->setFormatCode('#,##0');                             // NÂ° OPER. MES PASADO
+                $sheet->getStyle('Q3:Q' . $lastRow)->getNumberFormat()->setFormatCode('#,##0');                             // NÂ° OPER.
+                $sheet->getStyle('F3:F' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);  // % clientes
                 $sheet->getStyle('I3:I' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);  // % nuevos
                 $sheet->getStyle('M3:M' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);  // MORA >7
                 $sheet->getStyle('S3:S' . $lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_PERCENTAGE_00);  // AVANCE DESEMB. %
