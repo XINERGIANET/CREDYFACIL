@@ -7,7 +7,10 @@ use App\Exports\ClientsExport;
 use App\Models\Contract;
 use App\Models\Quota;
 use App\Models\User;
+use App\Models\Payment;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\InactiveClientsExport;
 
 class ClientController extends Controller
 {
@@ -34,6 +37,24 @@ class ClientController extends Controller
         $name = 'Clientes_' . now()->format('d_m_Y') . '.xlsx';
 
         return Excel::download(new ClientsExport, $name);
+    }
+
+    public function inactive(Request $request)
+    {
+        $sellers = User::seller()->where('state', 0)->active()->get();
+        $inactive_clients = $this->inactiveClientsQuery($request)
+            ->paginate(20);
+
+        $total_clients = $inactive_clients->total();
+
+        return view('clients.inactive', compact('inactive_clients', 'sellers', 'total_clients'));
+    }
+
+    public function inactiveExcel(Request $request)
+    {
+        $name = 'Clientes_Inactivos_' . now()->format('d_m_Y') . '.xlsx';
+
+        return Excel::download(new InactiveClientsExport, $name);
     }
 
     public function check(Request $request){
@@ -128,5 +149,122 @@ class ClientController extends Controller
                 ->orWhere('document', 'like', '%'.$request->q.'%');
         })->where('client_type', 'Personal')->orderBy('name')->get();
         return response()->json(['items' => $contracts]);
+    }
+
+    public static function inactiveClientsQuery(Request $request)
+    {
+        $user = auth()->user();
+
+        $latestInactiveContractIds = Contract::query()
+            ->selectRaw('MAX(contracts.id)')
+            ->where('contracts.deleted', 0)
+            ->where('contracts.paid', 1)
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('contracts as current_contracts')
+                    ->where('current_contracts.deleted', 0)
+                    ->where('current_contracts.paid', 0)
+                    ->whereRaw("
+                        (
+                            contracts.client_type = 'Personal'
+                            and current_contracts.client_type = 'Personal'
+                            and current_contracts.document = contracts.document
+                        )
+                        or
+                        (
+                            contracts.client_type = 'Grupo'
+                            and current_contracts.client_type = 'Grupo'
+                            and current_contracts.group_name = contracts.group_name
+                        )
+                    ");
+            })
+            ->groupBy(DB::raw("
+                CASE
+                    WHEN contracts.client_type = 'Personal' THEN CONCAT('P:', COALESCE(contracts.document, ''))
+                    ELSE CONCAT('G:', COALESCE(contracts.group_name, ''))
+                END
+            "));
+
+        return Contract::active()
+            ->whereIn('contracts.id', $latestInactiveContractIds)
+            ->when($user->hasRole('seller'), function ($query) use ($user) {
+                return $query->where('contracts.seller_id', $user->id);
+            })
+            ->when($request->name, function ($query, $name) {
+                return $query->where(function ($query) use ($name) {
+                    return $query->where('contracts.name', 'like', '%' . $name . '%')
+                        ->orWhere('contracts.group_name', 'like', '%' . $name . '%')
+                        ->orWhere('contracts.document', 'like', '%' . $name . '%');
+                });
+            })
+            ->when($request->client_type, function ($query, $client_type) {
+                return $query->where('contracts.client_type', $client_type);
+            })
+            ->when($request->seller_id, function ($query, $seller_id) {
+                return $query->where('contracts.seller_id', $seller_id);
+            })
+            ->when($request->start_date, function ($query, $start_date) {
+                return $query->whereDate('contracts.date', '>=', $start_date);
+            })
+            ->when($request->end_date, function ($query, $end_date) {
+                return $query->whereDate('contracts.date', '<=', $end_date);
+            })
+            ->when($request->last_payment_start_date, function ($query, $start_date) {
+                return $query->whereRaw("
+                    (
+                        select max(payments.date)
+                        from payments
+                        inner join quotas on quotas.id = payments.quota_id
+                        where quotas.contract_id = contracts.id
+                            and payments.deleted = 0
+                    ) >= ?
+                ", [$start_date]);
+            })
+            ->when($request->last_payment_end_date, function ($query, $end_date) {
+                return $query->whereRaw("
+                    (
+                        select max(payments.date)
+                        from payments
+                        inner join quotas on quotas.id = payments.quota_id
+                        where quotas.contract_id = contracts.id
+                            and payments.deleted = 0
+                    ) <= ?
+                ", [$end_date]);
+            })
+            ->with('seller')
+            ->addSelect([
+                'last_payment_date_value' => Payment::query()
+                    ->select('payments.date')
+                    ->join('quotas', 'quotas.id', '=', 'payments.quota_id')
+                    ->whereColumn('quotas.contract_id', 'contracts.id')
+                    ->where('payments.deleted', 0)
+                    ->latest('payments.date')
+                    ->latest('payments.id')
+                    ->limit(1),
+                'last_payment_amount_value' => Payment::query()
+                    ->select('payments.amount')
+                    ->join('quotas', 'quotas.id', '=', 'payments.quota_id')
+                    ->whereColumn('quotas.contract_id', 'contracts.id')
+                    ->where('payments.deleted', 0)
+                    ->latest('payments.date')
+                    ->latest('payments.id')
+                    ->limit(1),
+                'total_paid_value' => Payment::query()
+                    ->selectRaw('COALESCE(SUM(payments.amount), 0)')
+                    ->join('quotas', 'quotas.id', '=', 'payments.quota_id')
+                    ->whereColumn('quotas.contract_id', 'contracts.id')
+                    ->where('payments.deleted', 0),
+            ])
+            ->orderByRaw("
+                (
+                    select max(payments.date)
+                    from payments
+                    inner join quotas on quotas.id = payments.quota_id
+                    where quotas.contract_id = contracts.id
+                        and payments.deleted = 0
+                ) desc
+            ")
+            ->latest('contracts.date')
+            ->latest('contracts.id');
     }
 }
