@@ -7,16 +7,40 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Exports\ExpensesExport;
 use App\Exports\ExpensesCashExport;
+use App\Exports\DisbursementsDailyExport;
+use App\Services\DisbursementDailyService;
 use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use App\Models\Expense;
+use App\Models\Contract;
+use App\Models\DisbursementCheck;
 use App\Models\User;
 use App\Models\PaymentMethod;
 use App\Models\ExpensePayment;
 
 class ExpenseController extends Controller
 {
-    public function index(Request $request){
+    public function index(Request $request, DisbursementDailyService $disbursementService){
         $user = auth()->user();
+        $dailyDate = $request->daily_date ?: now()->format('Y-m-d');
+        $dailyCarbon = Carbon::parse($dailyDate);
+        $dailySellerId = $request->daily_seller_id ?: null;
+
+        $dailyRows = $disbursementService->buildDailyRows($dailyCarbon, $user, $dailySellerId);
+        $dayExpenses = Expense::with('expensePayments.paymentMethod')->active()
+            ->whereNotNull('contract_id')
+            ->whereDate('date', $dailyCarbon)
+            ->when($user->hasRole('seller'), function ($query) use ($user) {
+                return $query->where('seller_id', $user->id);
+            })
+            ->when($dailySellerId, function ($query, $dailySellerId) {
+                return $query->where('seller_id', $dailySellerId);
+            })
+            ->get();
+        $dailySummary = $disbursementService->summary($dailyRows, $dayExpenses);
+        $dayBcpPayments = $disbursementService->dayBcpPayments($dailyCarbon, $user, $dailySellerId);
+
         $expensesQuery = Expense::with('expensePayments.paymentMethod')->active()
             ->when($user->hasRole('seller'), function($query) use($user){
                 return $query->where('seller_id', $user->id);
@@ -50,7 +74,145 @@ class ExpenseController extends Controller
         $sellers = User::seller()->where('state', 0)->active()->get();
         $payment_methods = PaymentMethod::all();
         
-        return view('expenses.index', compact('expenses', 'sellers', 'payment_methods', 'total'));
+        return view('expenses.index', compact(
+            'expenses',
+            'sellers',
+            'payment_methods',
+            'total',
+            'dailyDate',
+            'dailyRows',
+            'dailySummary',
+            'dayBcpPayments',
+            'dailySellerId'
+        ));
+    }
+
+    public function dailyContractDetail(Request $request, Contract $contract, DisbursementDailyService $disbursementService)
+    {
+        $date = $request->date ?: now()->format('Y-m-d');
+        $user = auth()->user();
+
+        if ($user->hasRole('seller') && (int) $contract->seller_id !== (int) $user->id) {
+            return response()->json(['status' => false, 'error' => 'No autorizado'], 403);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $disbursementService->contractDetail($contract, Carbon::parse($date)),
+        ]);
+    }
+
+    public function contractInfo(Request $request, Contract $contract, DisbursementDailyService $disbursementService)
+    {
+        $date = $request->date ?: ($contract->date ? $contract->date->format('Y-m-d') : now()->format('Y-m-d'));
+        $user = auth()->user();
+
+        if ($user->hasRole('seller') && (int) $contract->seller_id !== (int) $user->id) {
+            return response()->json(['status' => false, 'error' => 'No autorizado'], 403);
+        }
+
+        $data = $disbursementService->enrichContract(
+            $contract->load(['seller', 'expenses.expensePayments.paymentMethod']),
+            Carbon::parse($date),
+            false
+        );
+
+        return response()->json([
+            'status' => true,
+            'data' => $data,
+        ]);
+    }
+
+    public function toggleDailyCheck(Request $request, DisbursementDailyService $disbursementService)
+    {
+        $validator = Validator::make($request->all(), [
+            'contract_id' => 'required|exists:contracts,id',
+            'date' => 'required|date',
+            'marked' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'error' => $validator->errors()->first(),
+            ]);
+        }
+
+        $contract = Contract::findOrFail($request->contract_id);
+        $user = auth()->user();
+
+        if ($user->hasRole('seller') && (int) $contract->seller_id !== (int) $user->id) {
+            return response()->json(['status' => false, 'error' => 'No autorizado'], 403);
+        }
+
+        $check = DisbursementCheck::updateOrCreate(
+            [
+                'contract_id' => $request->contract_id,
+                'date' => $request->date,
+            ],
+            [
+                'marked' => (bool) $request->marked,
+                'user_id' => auth()->id(),
+            ]
+        );
+
+        return response()->json([
+            'status' => true,
+            'marked' => (bool) $check->marked,
+        ]);
+    }
+
+    public function excelDaily(Request $request, DisbursementDailyService $disbursementService)
+    {
+        $date = $request->daily_date ?: now()->format('Y-m-d');
+        $user = auth()->user();
+        $rows = $disbursementService->buildDailyRows(Carbon::parse($date), $user, $request->daily_seller_id);
+        $dayExpenses = Expense::with('expensePayments')->active()
+            ->whereNotNull('contract_id')
+            ->whereDate('date', $date)
+            ->when($user->hasRole('seller'), function ($query) use ($user) {
+                return $query->where('seller_id', $user->id);
+            })
+            ->when($request->daily_seller_id, function ($query, $sellerId) {
+                return $query->where('seller_id', $sellerId);
+            })
+            ->get();
+        $summary = $disbursementService->summary($rows, $dayExpenses);
+        $name = 'Desembolsos_dia_' . Carbon::parse($date)->format('d_m_Y') . '.xlsx';
+
+        return Excel::download(new DisbursementsDailyExport($rows->values()->all(), $summary, $date), $name);
+    }
+
+    public function pdfDaily(Request $request, DisbursementDailyService $disbursementService)
+    {
+        $date = $request->daily_date ?: now()->format('Y-m-d');
+        $user = auth()->user();
+        $rows = $disbursementService->buildDailyRows(Carbon::parse($date), $user, $request->daily_seller_id);
+        $dayExpenses = Expense::with('expensePayments')->active()
+            ->whereNotNull('contract_id')
+            ->whereDate('date', $date)
+            ->when($user->hasRole('seller'), function ($query) use ($user) {
+                return $query->where('seller_id', $user->id);
+            })
+            ->when($request->daily_seller_id, function ($query, $sellerId) {
+                return $query->where('seller_id', $sellerId);
+            })
+            ->get();
+        $summary = $disbursementService->summary($rows, $dayExpenses);
+        $sellerName = null;
+
+        if ($request->daily_seller_id) {
+            $sellerName = optional(User::find($request->daily_seller_id))->name;
+        }
+
+        $pdf = Pdf::loadView('expenses.daily_pdf', [
+            'rows' => $rows,
+            'summary' => $summary,
+            'dateLabel' => Carbon::parse($date)->format('d/m/Y'),
+            'sellerName' => $sellerName,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('Desembolsos_dia_' . Carbon::parse($date)->format('d_m_Y') . '.pdf');
     }
 
     public function index_cash(Request $request){

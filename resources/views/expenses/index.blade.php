@@ -11,6 +11,203 @@
   </ol>
 </nav>
 
+<div class="card mb-3 border-primary">
+	<div class="card-header bg-primary-lt">
+		<div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+			<h3 class="card-title mb-0">Control de desembolsos del día</h3>
+			<div class="d-flex flex-wrap gap-2">
+				<a class="btn btn-sm btn-success" href="{{ route('expenses.daily.excel', ['daily_date' => $dailyDate, 'daily_seller_id' => $dailySellerId]) }}" target="_blank">Excel del día</a>
+				<a class="btn btn-sm btn-danger" href="{{ route('expenses.daily.pdf', ['daily_date' => $dailyDate, 'daily_seller_id' => $dailySellerId]) }}" target="_blank">PDF del día</a>
+			</div>
+		</div>
+	</div>
+	<div class="card-body border-bottom">
+		<form method="GET" action="{{ route('expenses.index') }}" class="row g-2 align-items-end">
+			<input type="hidden" name="description" value="{{ request()->description }}">
+			<input type="hidden" name="seller_id" value="{{ request()->seller_id }}">
+			<input type="hidden" name="payment_method_id" value="{{ request()->payment_method_id }}">
+			<input type="hidden" name="start_date" value="{{ request()->start_date }}">
+			<input type="hidden" name="end_date" value="{{ request()->end_date }}">
+			<div class="col-md-3">
+				<label class="form-label">Fecha del día</label>
+				<input type="date" class="form-control" name="daily_date" value="{{ $dailyDate }}">
+			</div>
+			@if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('operations'))
+			<div class="col-md-3">
+				<label class="form-label">Asesor</label>
+				<select class="form-select" name="daily_seller_id">
+					<option value="">Todos</option>
+					@foreach($sellers as $seller)
+					<option value="{{ $seller->id }}" @if($dailySellerId == $seller->id) selected @endif>{{ $seller->name }}</option>
+					@endforeach
+				</select>
+			</div>
+			@endif
+			<div class="col-md-2">
+				<button class="btn btn-primary w-100">Ver día</button>
+			</div>
+		</form>
+	</div>
+	<div class="card-body pb-0">
+		<div class="row g-3 mb-3">
+			<div class="col-md-2 col-6">
+				<div class="border rounded p-2 text-center">
+					<div class="small text-muted">Aprobados</div>
+					<div class="fs-3 fw-bold">{{ $dailySummary['approved_count'] }}</div>
+				</div>
+			</div>
+			<div class="col-md-2 col-6">
+				<div class="border rounded p-2 text-center border-success">
+					<div class="small text-muted">Desembolsados</div>
+					<div class="fs-3 fw-bold text-success">{{ $dailySummary['disbursed_count'] }}</div>
+				</div>
+			</div>
+			<div class="col-md-2 col-6">
+				<div class="border rounded p-2 text-center border-warning">
+					<div class="small text-muted">Pendientes</div>
+					<div class="fs-3 fw-bold text-warning">{{ $dailySummary['pending_count'] }}</div>
+				</div>
+			</div>
+			<div class="col-md-2 col-6">
+				<div class="border rounded p-2 text-center">
+					<div class="small text-muted">Solicitado</div>
+					<div class="fw-bold">S/{{ number_format($dailySummary['total_requested'], 2) }}</div>
+				</div>
+			</div>
+			<div class="col-md-2 col-6">
+				<div class="border rounded p-2 text-center border-info">
+					<div class="small text-muted">Retanqueo BCP</div>
+					<div class="fw-bold text-info">S/{{ number_format($dailySummary['total_retainage'], 2) }}</div>
+				</div>
+			</div>
+			<div class="col-md-2 col-6">
+				<div class="border rounded p-2 text-center border-primary">
+					<div class="small text-muted">Neto a entregar</div>
+					<div class="fw-bold text-primary">S/{{ number_format($dailySummary['total_net'], 2) }}</div>
+				</div>
+			</div>
+		</div>
+		@if($dailySummary['pending_count'] > 0)
+		<div class="alert alert-warning py-2">
+			<strong>Atención:</strong> Hay {{ $dailySummary['pending_count'] }} contrato(s) aprobado(s) del día sin registro de desembolso en egresos.
+		</div>
+		@else
+		<div class="alert alert-success py-2">
+			Todos los contratos del día tienen desembolso registrado.
+		</div>
+		@endif
+	</div>
+	@if($dayBcpPayments->count() > 0)
+	<div class="card-body border-top pt-3 pb-0">
+		<h4 class="mb-2">Pagos BCP del día (retanqueos)</h4>
+		<div class="table-responsive mb-3">
+			<table class="table table-sm table-bordered">
+				<thead>
+					<tr>
+						<th>Cliente</th>
+						<th>Contrato prev.</th>
+						<th>Cuota</th>
+						<th>Asesor</th>
+						<th>Monto</th>
+						<th>Última cuota</th>
+						<th>Fecha</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach($dayBcpPayments as $bcp)
+					<tr>
+						<td>{{ $bcp['client'] }}</td>
+						<td>#{{ $bcp['contract_id'] }}</td>
+						<td>{{ $bcp['quota_number'] }}</td>
+						<td>{{ $bcp['seller_name'] }}</td>
+						<td>S/{{ number_format($bcp['amount'], 2) }}</td>
+						<td>
+							@if($bcp['is_last_quota'])
+							<span class="badge bg-info">Sí</span>
+							@else
+							<span class="badge bg-secondary">No</span>
+							@endif
+						</td>
+						<td>{{ $bcp['date'] }}</td>
+					</tr>
+					@endforeach
+				</tbody>
+			</table>
+		</div>
+	</div>
+	@endif
+	<div class="table-responsive">
+		<table class="table table-vcenter table-striped card-table" id="dailyDisbursementsTable">
+			<thead>
+				<tr>
+					<th class="w-1" title="Marcar revisión manual">OK</th>
+					<th>Cliente</th>
+					<th>Asesor</th>
+					<th>Tipo</th>
+					<th>Solicitado</th>
+					<th>BCP (ret.)</th>
+					<th>Neto</th>
+					<th>Estado</th>
+					<th>Acciones</th>
+				</tr>
+			</thead>
+			<tbody>
+				@if($dailyRows->count() > 0)
+				@foreach($dailyRows as $row)
+				<tr class="@if($row['pending']) table-warning @endif" data-contract-id="{{ $row['id'] }}">
+					<td>
+						<input type="checkbox" class="form-check-input daily-check" data-contract-id="{{ $row['id'] }}" @if($row['marked']) checked @endif @if($row['disbursed']) disabled @endif>
+					</td>
+					<td>
+						<strong>{{ $row['client'] }}</strong>
+						<div class="small text-muted">{{ $row['document'] ?: $row['group_name'] }}</div>
+					</td>
+					<td>{{ $row['seller_name'] }}</td>
+					<td><span class="badge bg-azure-lt">{{ $row['contract_type'] }}</span></td>
+					<td>S/{{ number_format($row['requested_amount'], 2) }}</td>
+					<td>
+						@if($row['bcp_retainage'] > 0)
+						<span class="text-info fw-semibold">S/{{ number_format($row['bcp_retainage'], 2) }}</span>
+						@if(count($row['bcp_payments']) > 0)
+						<div class="small text-muted">{{ count($row['bcp_payments']) }} pago(s) últ. cuota</div>
+						@endif
+						@else
+						<span class="text-muted">—</span>
+						@endif
+					</td>
+					<td class="fw-bold text-primary">S/{{ number_format($row['net_amount'], 2) }}</td>
+					<td>
+						@if($row['disbursed'])
+						<span class="badge bg-success">Desembolsado</span>
+						<div class="small">S/{{ number_format($row['disbursed_amount'], 2) }}</div>
+						@else
+						<span class="badge bg-warning text-dark">Pendiente</span>
+						@endif
+					</td>
+					<td>
+						<div class="d-flex gap-1">
+							<button type="button" class="btn btn-sm btn-outline-primary btn-daily-detail" data-id="{{ $row['id'] }}" title="Ver detalle">
+								<i class="ti ti-eye"></i>
+							</button>
+							@if($row['pending'] && (auth()->user()->hasRole('seller') || auth()->user()->hasRole('admin') || auth()->user()->hasRole('operations')))
+							<button type="button" class="btn btn-sm btn-primary btn-daily-disburse" data-id="{{ $row['id'] }}" data-net="{{ $row['net_amount'] }}" data-seller="{{ $row['seller_id'] }}" title="Registrar desembolso">
+								<i class="ti ti-cash"></i>
+							</button>
+							@endif
+						</div>
+					</td>
+				</tr>
+				@endforeach
+				@else
+				<tr>
+					<td colspan="9" class="text-center text-muted">No hay contratos aprobados para esta fecha</td>
+				</tr>
+				@endif
+			</tbody>
+		</table>
+	</div>
+</div>
+
 <div class="card">
 	<div class="card-header d-flex justify-content-between align-items-center">
 		<div>
@@ -183,6 +380,14 @@
   			  			</select>
   			  		</div>
   			  	</div>
+				<div class="col-lg-12 d-none" id="contractRetanqueoAlert">
+					<div class="alert alert-info py-2 mb-0">
+						<div><strong>Monto solicitado:</strong> S/<span id="infoRequested">0.00</span></div>
+						<div><strong>Retanqueo BCP (últ. cuota del día):</strong> S/<span id="infoBcp">0.00</span></div>
+						<div><strong>Neto sugerido a entregar:</strong> S/<span id="infoNet" class="fw-bold">0.00</span></div>
+						<div class="small mt-1" id="infoBcpDetail"></div>
+					</div>
+				</div>
 		  		<!-- monto ya se gestiona en expense_payments -->
  				<div class="col-12">
 		  			<div class="mb-3">
@@ -315,14 +520,118 @@
     </div>
   </div>
 </div>
+
+<div class="modal modal-blur fade" id="dailyDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+  	<div class="modal-content">
+  		<div class="modal-header">
+  		  <h5 class="modal-title">Detalle del contrato</h5>
+  		  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  		</div>
+  		<div class="modal-body" id="dailyDetailBody">
+  			<div class="text-center text-muted py-4">Cargando...</div>
+  		</div>
+  		<div class="modal-footer">
+  		  <button type="button" class="btn me-auto" data-bs-dismiss="modal">Cerrar</button>
+  		  <button type="button" class="btn btn-primary d-none" id="dailyDetailDisburseBtn">Registrar desembolso</button>
+  		</div>
+    </div>
+  </div>
+</div>
 @endsection
 
 @section('scripts')
 <script>
 
+	var dailyDate = '{{ $dailyDate }}';
+	var tsContracts;
+
+	function loadContractRetanqueoInfo(contractId){
+		if(!contractId){
+			$('#contractRetanqueoAlert').addClass('d-none');
+			return;
+		}
+		$.get('{{ url("expenses/contract-info") }}/' + contractId, { date: $('#date').val() || dailyDate }, function(res){
+			if(!res.status) return;
+			var d = res.data;
+			$('#infoRequested').text(parseFloat(d.requested_amount).toFixed(2));
+			$('#infoBcp').text(parseFloat(d.bcp_retainage).toFixed(2));
+			$('#infoNet').text(parseFloat(d.net_amount).toFixed(2));
+			var detail = '';
+			if(d.bcp_payments && d.bcp_payments.length){
+				d.bcp_payments.forEach(function(p){
+					detail += '<div>• ' + p.contract_label + ' cuota #' + p.quota_number + ': S/' + parseFloat(p.amount).toFixed(2) + '</div>';
+				});
+			} else {
+				detail = 'Sin retanqueo BCP en la última cuota del día.';
+			}
+			$('#infoBcpDetail').html(detail);
+			$('#contractRetanqueoAlert').removeClass('d-none');
+			if(!$('#payment_amount').val()){
+				$('#payment_amount').val(parseFloat(d.net_amount).toFixed(2));
+			}
+			if(d.seller_id){
+				$('#seller_id').val(d.seller_id);
+			}
+		});
+	}
+
+	function renderDailyDetail(d){
+		var bcpHtml = '';
+		if(d.bcp_payments && d.bcp_payments.length){
+			bcpHtml = '<ul class="mb-0">';
+			d.bcp_payments.forEach(function(p){
+				bcpHtml += '<li>' + p.contract_label + ' — cuota #' + p.quota_number + ': S/' + parseFloat(p.amount).toFixed(2) + '</li>';
+			});
+			bcpHtml += '</ul>';
+		} else {
+			bcpHtml = '<span class="text-muted">No aplica retanqueo BCP en última cuota del día.</span>';
+		}
+		var prevHtml = '';
+		if(d.previous_contracts && d.previous_contracts.length){
+			prevHtml = '<table class="table table-sm"><thead><tr><th>Contrato</th><th>Monto</th><th>Fecha</th><th>Asesor</th></tr></thead><tbody>';
+			d.previous_contracts.forEach(function(c){
+				prevHtml += '<tr><td>' + c.client + '</td><td>S/' + parseFloat(c.requested_amount).toFixed(2) + '</td><td>' + c.date + '</td><td>' + (c.seller_name || '') + '</td></tr>';
+			});
+			prevHtml += '</tbody></table>';
+		} else {
+			prevHtml = '<span class="text-muted">Sin contratos previos.</span>';
+		}
+		var status = d.disbursed ? '<span class="badge bg-success">Desembolsado</span>' : '<span class="badge bg-warning text-dark">Pendiente</span>';
+		return '<div class="row g-3">'
+			+ '<div class="col-md-6"><strong>Cliente:</strong> ' + d.client + '</div>'
+			+ '<div class="col-md-6"><strong>Asesor:</strong> ' + (d.seller_name || '') + '</div>'
+			+ '<div class="col-md-6"><strong>Documento/Grupo:</strong> ' + (d.document || d.group_name || '') + '</div>'
+			+ '<div class="col-md-6"><strong>Tipo:</strong> ' + d.contract_type + '</div>'
+			+ '<div class="col-md-6"><strong>Teléfono:</strong> ' + (d.phone || '—') + '</div>'
+			+ '<div class="col-md-6"><strong>Dirección:</strong> ' + (d.address || '—') + '</div>'
+			+ '<div class="col-md-4"><strong>Solicitado:</strong> S/' + parseFloat(d.requested_amount).toFixed(2) + '</div>'
+			+ '<div class="col-md-4"><strong>Retanqueo BCP:</strong> S/' + parseFloat(d.bcp_retainage).toFixed(2) + '</div>'
+			+ '<div class="col-md-4"><strong>Neto:</strong> S/' + parseFloat(d.net_amount).toFixed(2) + '</div>'
+			+ '<div class="col-md-6"><strong>Cuotas:</strong> ' + d.quotas_number + ' — Cuota: S/' + parseFloat(d.quota_amount).toFixed(2) + '</div>'
+			+ '<div class="col-md-6"><strong>Estado desembolso:</strong> ' + status + '</div>'
+			+ '<div class="col-12"><strong>Retanqueos BCP detectados:</strong>' + bcpHtml + '</div>'
+			+ '<div class="col-12"><strong>Contratos anteriores del cliente:</strong>' + prevHtml + '</div>'
+			+ '</div>';
+	}
+
+	function openDisburseForContract(contractId, netAmount, sellerId){
+		$('#createModal').modal('show');
+		if(tsContracts){
+			tsContracts.setValue(contractId, true);
+		}
+		if(sellerId){
+			$('#seller_id').val(sellerId);
+		}
+		if(netAmount){
+			$('#payment_amount').val(parseFloat(netAmount).toFixed(2));
+		}
+		loadContractRetanqueoInfo(contractId);
+	}
+
 	$(document).ready(function(){
 
-		new TomSelect('.ts-contracts', {
+		tsContracts = new TomSelect('.ts-contracts', {
 			valueField: 'id',
 			labelField: ['name', 'group_name'],
 			searchField: ['name', 'group_name'],
@@ -352,6 +661,9 @@
 					return '<div class="no-results">No se encontraron resultados</div>'
 				}
 			},
+			onChange: function(value){
+				loadContractRetanqueoInfo(value);
+			},
 		});
 
 	});
@@ -374,6 +686,50 @@
 		$('#payment_method_id_2').val('');
 		$('#payment_amount_2').val('');
 		$('#addPaymentBtn').prop('disabled', false);
+		$('#contractRetanqueoAlert').addClass('d-none');
+	});
+
+	$('#date').on('change', function(){
+		var cid = tsContracts ? tsContracts.getValue() : $('#contract_id').val();
+		loadContractRetanqueoInfo(cid);
+	});
+
+	$(document).on('change', '.daily-check', function(){
+		var $el = $(this);
+		$.post('{{ route("expenses.daily-check") }}', {
+			_token: '{{ csrf_token() }}',
+			contract_id: $el.data('contract-id'),
+			date: dailyDate,
+			marked: $el.is(':checked') ? 1 : 0
+		}).fail(function(){
+			ToastError.fire({ text: 'No se pudo guardar la marca' });
+			$el.prop('checked', !$el.is(':checked'));
+		});
+	});
+
+	$(document).on('click', '.btn-daily-detail', function(){
+		var id = $(this).data('id');
+		$('#dailyDetailBody').html('<div class="text-center text-muted py-4">Cargando...</div>');
+		$('#dailyDetailDisburseBtn').addClass('d-none');
+		$('#dailyDetailModal').modal('show');
+		$.get('{{ url("expenses/daily-contract") }}/' + id, { date: dailyDate }, function(res){
+			if(!res.status){
+				$('#dailyDetailBody').html('<div class="text-danger">No se pudo cargar el detalle</div>');
+				return;
+			}
+			var d = res.data;
+			$('#dailyDetailBody').html(renderDailyDetail(d));
+			if(d.pending){
+				$('#dailyDetailDisburseBtn').removeClass('d-none').off('click').on('click', function(){
+					$('#dailyDetailModal').modal('hide');
+					openDisburseForContract(d.id, d.net_amount, d.seller_id);
+				});
+			}
+		});
+	});
+
+	$(document).on('click', '.btn-daily-disburse', function(){
+		openDisburseForContract($(this).data('id'), $(this).data('net'), $(this).data('seller'));
 	});
 
 	// Al cerrar modal de edición, resetear segundo select

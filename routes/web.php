@@ -72,6 +72,11 @@ Route::middleware('auth')->group(function () {
 	Route::post('settings', [SettingController::class, 'update'])->name('settings.update');
 
 	Route::get('expenses/excel', [ExpenseController::class, 'excel'])->name('expenses.excel');
+	Route::get('expenses/daily/excel', [ExpenseController::class, 'excelDaily'])->name('expenses.daily.excel');
+	Route::get('expenses/daily/pdf', [ExpenseController::class, 'pdfDaily'])->name('expenses.daily.pdf');
+	Route::get('expenses/contract-info/{contract}', [ExpenseController::class, 'contractInfo'])->name('expenses.contract-info');
+	Route::get('expenses/daily-contract/{contract}', [ExpenseController::class, 'dailyContractDetail'])->name('expenses.daily-contract');
+	Route::post('expenses/daily-check', [ExpenseController::class, 'toggleDailyCheck'])->name('expenses.daily-check');
 	Route::get('expenses/index_cash', [ExpenseController::class, 'index_cash'])->name('expenses.index_cash');
 	Route::get('expenses/excel_cash', [ExpenseController::class, 'excel_cash'])->name('expenses.excel_cash');
 	Route::resource('expenses', ExpenseController::class);

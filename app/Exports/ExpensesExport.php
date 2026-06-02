@@ -36,7 +36,9 @@ class ExpensesExport implements FromCollection, WithHeadings, WithMapping, WithS
             return $query->whereDate('date', '>=', $start_date);
         })->when($request->end_date, function($query, $end_date){
             return $query->whereDate('date', '<=', $end_date);
-        })->latest('date')->latest('id')->get();
+        })->latest('date')->latest('id')
+            ->whereNotNull('contract_id')
+            ->get();
 
         return $expenses;
     }
