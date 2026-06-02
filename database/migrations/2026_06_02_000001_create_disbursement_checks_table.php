@@ -8,6 +8,8 @@ class CreateDisbursementChecksTable extends Migration
 {
     public function up()
     {
+        Schema::dropIfExists('disbursement_checks');
+
         Schema::create('disbursement_checks', function (Blueprint $table) {
             $table->id();
             $table->bigInteger('contract_id');
