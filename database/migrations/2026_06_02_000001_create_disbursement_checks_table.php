@@ -10,10 +10,10 @@ class CreateDisbursementChecksTable extends Migration
     {
         Schema::create('disbursement_checks', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('contract_id');
+            $table->bigInteger('contract_id');
             $table->date('date');
             $table->boolean('marked')->default(false);
-            $table->unsignedBigInteger('user_id')->nullable();
+            $table->bigInteger('user_id')->nullable();
             $table->timestamps();
 
             $table->unique(['contract_id', 'date']);
