@@ -220,30 +220,64 @@ class ClientPortfolioService
             $contract = $quota->contract;
             return $contract ? $this->clientKey($contract) : 'Q:' . $quota->id;
         })->map(function ($group) {
-            $contract = $group->first()->contract;
-            $overdue = $group->filter(function ($q) {
-                return (float) $q->debt > 0;
+            $contract = $this->resolveOverdueDisplayContract($group);
+            if (!$contract) {
+                return null;
+            }
+
+            $overdue = $group->filter(function ($q) use ($contract) {
+                return (int) $q->contract_id === (int) $contract->id
+                    && (float) $q->debt > 0;
             });
 
+            if ($overdue->isEmpty()) {
+                return null;
+            }
+
             $oldest = $overdue->sortBy('date')->first();
+            $paidQuotas = $this->paidQuotasCount($contract);
+            $totalQuotas = (int) $contract->quotas_number;
+            $overdueCount = $overdue->count();
 
             return (object) [
                 'contract' => $contract,
-                'client_name' => $contract ? $contract->client() : 'N/A',
-                'document' => $contract ? ($contract->document ?: $contract->group_name) : '',
-                'seller_name' => optional(optional($contract)->seller)->name,
+                'client_name' => $contract->client(),
+                'document' => $contract->document ?: $contract->group_name,
+                'seller_name' => optional($contract->seller)->name,
                 'total_overdue_debt' => round((float) $overdue->sum('debt'), 2),
-                'requested_amount' => $contract ? (float) $contract->requested_amount : 0,
-                'disbursement_date' => $contract && $contract->date ? $contract->date->format('d/m/Y') : '',
-                'paid_quotas' => $contract ? $this->paidQuotasCount($contract) : 0,
-                'total_quotas' => $contract ? (int) $contract->quotas_number : 0,
-                'quota_amount' => $contract ? (float) $contract->quota_amount : 0,
-                'capital_balance' => $contract ? $this->capitalBalance($contract) : 0,
-                'overdue_quotas_count' => $overdue->count(),
+                'requested_amount' => (float) $contract->requested_amount,
+                'disbursement_date' => $contract->date ? $contract->date->format('d/m/Y') : '',
+                'paid_quotas' => $paidQuotas,
+                'total_quotas' => $totalQuotas,
+                'quota_amount' => (float) $contract->quota_amount,
+                'capital_balance' => $this->capitalBalance($contract),
+                'overdue_quotas_count' => $overdueCount,
                 'days_overdue' => $oldest ? (int) Carbon::parse($oldest->date)->diffInDays(now()->startOfDay()) : 0,
-                'contract_id' => $contract ? $contract->id : null,
+                'contract_id' => $contract->id,
             ];
-        })->values()->sortByDesc('total_overdue_debt')->values();
+        })->filter()->values()->sortByDesc('total_overdue_debt')->values();
+    }
+
+    /**
+     * Contrato vigente del cliente para mora: préstamo activo (paid=0) más reciente.
+     */
+    protected function resolveOverdueDisplayContract(Collection $quotaGroup): ?Contract
+    {
+        $contracts = $quotaGroup->map(function ($quota) {
+            return $quota->contract;
+        })->filter()->unique('id')->sortByDesc(function ($contract) {
+            return $contract->date ? $contract->date->timestamp : 0;
+        });
+
+        $active = $contracts->first(function ($contract) {
+            return (int) $contract->paid === 0 && (int) $contract->approved === 1;
+        });
+
+        if ($active) {
+            return $active;
+        }
+
+        return $contracts->first();
     }
 
     protected function clientContractsQuery(Contract $contract): Builder

@@ -31,7 +31,9 @@ class DuesExport implements FromCollection, WithHeadings, WithMapping, WithStyle
         $request = request();
         $date = $request->date ? $request->date : now();
 
-        return Quota::active()->when($user->hasRole('seller'), function ($query) use ($user) {
+        return Quota::active()->whereHas('contract', function ($query) {
+            $query->active()->where('approved', 1)->where('paid', 0);
+        })->when($user->hasRole('seller'), function ($query) use ($user) {
             return $query->whereHas('contract', function ($query) use ($user) {
                 return $query->where('seller_id', $user->id);
             });
