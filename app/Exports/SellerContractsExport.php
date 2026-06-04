@@ -24,27 +24,17 @@ class SellerContractsExport implements FromCollection, WithHeadings, WithMapping
     */
     public function collection()
     {
-        return Contract::where('seller_id', $this->seller_id)->get();
+        return Contract::where('seller_id', $this->seller_id)->with('seller')->get();
     }
 
     public function map($contract): array
     {
-        return [
-            $contract->number_pagare,
-            $contract->client(),
-            $contract->payable_amount,
-            $contract->date
-        ];
+        return StandardExcelFormat::fromContract($contract);
     }
 
     public function headings(): array
     {
-        return [
-            'Número de pagaré',
-            'Cliente/Grupo',
-            'Monto',
-            'Fecha'
-        ];
+        return StandardExcelFormat::headings();
     }
 
     public function styles(Worksheet $sheet)

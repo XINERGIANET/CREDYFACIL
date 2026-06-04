@@ -145,9 +145,24 @@ class ClientPortfolioService
         return round($currentDebt + $futurePayments, 2);
     }
 
-    public function capitalBalance(Contract $contract): float
+    /**
+     * Saldo pendiente del crédito (cuotas impagas: capital + interés + seguro).
+     */
+    public function totalDebt(Contract $contract): float
     {
-        return (float) $contract->quotas()->sum('debt');
+        return round((float) $contract->quotas()->where('paid', 0)->sum('debt'), 2);
+    }
+
+    /**
+     * Deuda vencida e impaga (mora).
+     */
+    public function overdueDebt(Contract $contract): float
+    {
+        return round((float) $contract->quotas()
+            ->where('paid', 0)
+            ->where('debt', '>', 0)
+            ->whereDate('date', '<', now())
+            ->sum('debt'), 2);
     }
 
     public function paidQuotasCount(Contract $contract): int
@@ -172,7 +187,7 @@ class ClientPortfolioService
             'civil_status' => $display->civil_status ?: '',
             'client_type' => $this->portfolioClientType($display),
             'credit_amount' => (float) $display->requested_amount,
-            'capital_balance' => $this->capitalBalance($display),
+            'total_debt' => $this->totalDebt($display),
             'disbursement_date' => optional($display->date)->format('d/m/Y'),
             'total_quotas' => (int) $display->quotas_number,
             'paid_quotas' => $this->paidQuotasCount($display),
@@ -250,7 +265,6 @@ class ClientPortfolioService
                 'paid_quotas' => $paidQuotas,
                 'total_quotas' => $totalQuotas,
                 'quota_amount' => (float) $contract->quota_amount,
-                'capital_balance' => $this->capitalBalance($contract),
                 'overdue_quotas_count' => $overdueCount,
                 'days_overdue' => $oldest ? (int) Carbon::parse($oldest->date)->diffInDays(now()->startOfDay()) : 0,
                 'contract_id' => $contract->id,

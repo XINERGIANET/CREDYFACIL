@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Services\DisbursementDailyService;
+use App\Models\Contract;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -37,22 +37,16 @@ class DisbursementsDailyExport implements FromArray, WithHeadings, WithStyles, S
             ['Neto a entregar', $this->summary['total_net']],
             ['Efectivo registrado en egresos', $this->summary['cash_out_expenses']],
             [],
-            ['Marcado', 'Cliente', 'Documento/Grupo', 'Asesor', 'Tipo', 'Solicitado', 'BCP ret.', 'Neto', 'Estado', 'Desembolsado'],
+            StandardExcelFormat::headings(),
         ];
 
         foreach ($this->rows as $row) {
-            $data[] = [
-                $row['marked'] ? 'SI' : '',
-                $row['client'],
-                $row['document'] ?: $row['group_name'],
-                $row['seller_name'],
-                $row['contract_type'],
-                $row['requested_amount'],
-                $row['bcp_retainage'],
-                $row['net_amount'],
-                $row['disbursed'] ? 'Desembolsado' : 'Pendiente',
-                $row['disbursed_amount'],
-            ];
+            $contract = Contract::with('seller')->find($row['id']);
+            if ($contract) {
+                $data[] = StandardExcelFormat::fromContract($contract, ['days_overdue' => 0]);
+            } else {
+                $data[] = array_fill(0, 14, '');
+            }
         }
 
         return $data;

@@ -54,37 +54,12 @@ class PaymentsExport implements FromCollection, WithHeadings, WithMapping, WithS
 
     public function map($payment): array
     {
-        $contract = optional(optional($payment->quota)->contract);
-        $b = $payment->capitalInterestInsuranceBreakdown();
-
-        return [
-            $contract->client(),
-            optional($contract->seller)->name,
-            optional($payment->quota)->number,
-            $b['capital'],
-            $b['interest'],
-            $b['insurance'],
-            $payment->amount,
-            optional($payment->payment_method)->name,
-            optional($payment->date)->format('d/m/Y'),
-            $payment->due_days,
-        ];
+        return StandardExcelFormat::fromPayment($payment);
     }
 
     public function headings(): array
     {
-        return [
-            'Cliente',
-            'Asesor comercial',
-            'Número de cuota',
-            'Capital',
-            'Interés',
-            'Seguro',
-            'Monto',
-            'Método de pago',
-            'Fecha de pago',
-            'Días de mora',
-        ];
+        return StandardExcelFormat::headings();
     }
 
     public function styles(Worksheet $sheet)

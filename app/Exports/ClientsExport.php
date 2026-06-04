@@ -34,44 +34,12 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
 
     public function map($contract): array
     {
-        $row = $this->service->contractExportRow($contract);
-
-        return [
-            $row['origin_seller'],
-            $row['current_seller'],
-            $row['client'],
-            $row['document'],
-            $row['phone'],
-            $row['address'],
-            $row['civil_status'],
-            $row['client_type'],
-            $row['credit_amount'],
-            $row['capital_balance'],
-            $row['disbursement_date'],
-            $row['total_quotas'],
-            $row['paid_quotas'],
-            $row['quota_amount'],
-        ];
+        return StandardExcelFormat::fromContract($contract);
     }
 
     public function headings(): array
     {
-        return [
-            'Asesor de Origen',
-            'Asesor Comercial Actual',
-            'Cliente',
-            'DNI',
-            'Teléfono',
-            'Dirección',
-            'Estado Civil',
-            'Tipo de Cliente',
-            'Monto del crédito otorgado',
-            'Saldo del crédito (capital)',
-            'Fecha de desembolso',
-            'Cuotas totales',
-            'Cuotas pagadas',
-            'Costo por cuota',
-        ];
+        return StandardExcelFormat::headings();
     }
 
     public function styles(Worksheet $sheet)

@@ -22,7 +22,7 @@ class ExpensesCashExport implements FromCollection, WithHeadings, WithMapping, W
         $request = request();
         $user = auth()->user();
         
-        $expenses = Expense::with('expensePayments.paymentMethod')->active()->when($user->hasRole('seller'), function($query) use($user){
+        $expenses = Expense::with(['expensePayments.paymentMethod', 'seller'])->active()->when($user->hasRole('seller'), function($query) use($user){
             return $query->where('seller_id', $user->id);
         })->when($request->description, function($query, $description){
             return $query->where('description', 'like', '%'.$description.'%');
@@ -43,35 +43,12 @@ class ExpensesCashExport implements FromCollection, WithHeadings, WithMapping, W
 
     public function map($expense): array
     {
-        return [
-            $expense->description,
-            optional($expense->seller)->name,
-            // calcular monto total a partir de expensePayments
-            $expense->expensePayments->sum('amount'),
-            // mostrar metodos de pago (primario / secundario si existe)
-            (function($expense){
-                $first = $expense->expensePayments->first();
-                if(!$first) return '';
-                $name = optional($first->paymentMethod)->name;
-                if($expense->expensePayments->count() > 1){
-                    $second = $expense->expensePayments->get(1);
-                    $name .= ' / ' . optional($second->paymentMethod)->name;
-                }
-                return $name;
-            })($expense),
-            $expense->date->format('d/m/Y')
-        ];
+        return StandardExcelFormat::fromExpense($expense);
     }
 
     public function headings(): array
     {
-        return [
-            'Descripción',
-            'Cliente/Grupo',
-            'Monto',
-            'Método de pago',
-            'Fecha'
-        ];
+        return StandardExcelFormat::headings();
     }
 
     public function styles(Worksheet $sheet)

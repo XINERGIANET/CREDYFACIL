@@ -26,22 +26,15 @@ class SellerOverdueExport implements FromCollection, WithHeadings, WithMapping, 
 
     public function map($contract): array
     {
-        return [
-            $contract->document,
-            $contract->client(),
-            $contract->overdue_debt ?? 0,
-            $contract->days_overdue,
-        ];
+        return StandardExcelFormat::fromContract($contract, [
+            'days_overdue' => (int) ($contract->days_overdue ?? 0),
+            'deuda_total' => (float) ($contract->overdue_debt ?? 0),
+        ]);
     }
 
     public function headings(): array
     {
-        return [
-            'DNI',
-            'Nombre',
-            'Deuda en mora',
-            'Días de mora',
-        ];
+        return StandardExcelFormat::headings();
     }
 
     public function styles(Worksheet $sheet)

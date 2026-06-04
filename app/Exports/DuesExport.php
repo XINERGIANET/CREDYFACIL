@@ -56,42 +56,18 @@ class DuesExport implements FromCollection, WithHeadings, WithMapping, WithStyle
             ->where('paid', 0)
             ->where('debt', '>', 0)
             ->whereDate('date', '<', $date)
-            ->with('contract.seller')
+            ->with(['contract.seller'])
             ->get();
     }
 
     public function map($row): array
     {
-        return [
-            $row->client_name,
-            $row->seller_name,
-            $row->total_overdue_debt,
-            $row->requested_amount,
-            $row->disbursement_date,
-            $row->paid_quotas,
-            $row->total_quotas,
-            $row->quota_amount,
-            $row->capital_balance,
-            $row->overdue_quotas_count,
-            $row->days_overdue,
-        ];
+        return StandardExcelFormat::fromGroupedOverdue($row);
     }
 
     public function headings(): array
     {
-        return [
-            'Cliente',
-            'Asesor',
-            'Deuda Total (mora)',
-            'Monto prestado',
-            'Fecha de desembolso',
-            'Cuotas pagadas',
-            'Cuotas totales',
-            'Importe de la cuota',
-            'Saldo capital',
-            'Cuotas en mora',
-            'Días de mora (máx.)',
-        ];
+        return StandardExcelFormat::headings();
     }
 
     public function styles(Worksheet $sheet)

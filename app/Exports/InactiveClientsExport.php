@@ -3,8 +3,6 @@
 namespace App\Exports;
 
 use App\Http\Controllers\ClientController;
-use App\Models\Contract;
-use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -21,63 +19,15 @@ class InactiveClientsExport implements FromCollection, WithHeadings, WithMapping
 
     public function map($contract): array
     {
-        return [
-            $contract->client(),
-            $this->documentLabel($contract),
-            $contract->phone,
-            $contract->client_type,
-            optional($contract->seller)->name,
-            $contract->id,
-            $contract->requested_amount,
-            $contract->payable_amount,
-            optional($contract->date)->format('d/m/Y'),
-            optional($contract->last_payment_date)->format('d/m/Y'),
-            $this->formatDate($contract->last_payment_date_value),
-            $contract->last_payment_amount_value,
-            $contract->total_paid_value,
-        ];
-    }
-
-    private function documentLabel(Contract $contract): string
-    {
-        if ($contract->client_type === 'Personal') {
-            return (string) ($contract->document ?? '');
-        }
-
-        $people = $contract->people ? json_decode($contract->people, true) : [];
-        if (! is_array($people)) {
-            return '';
-        }
-
-        return implode(', ', array_filter(array_column($people, 'document')));
-    }
-
-    private function formatDate($date): string
-    {
-        if (! $date) {
-            return '';
-        }
-
-        return Carbon::parse($date)->format('d/m/Y');
+        return StandardExcelFormat::fromContract($contract, [
+            'days_overdue' => 0,
+            'deuda_total' => 0,
+        ]);
     }
 
     public function headings(): array
     {
-        return [
-            'Cliente/Grupo',
-            'DNI/Integrantes',
-            'Telefono',
-            'Tipo',
-            'Asesor comercial',
-            'Ultimo contrato',
-            'Monto solicitado',
-            'Monto a pagar',
-            'Fecha de prestamo',
-            'Fecha de ultima cuota',
-            'Ultimo pago',
-            'Monto ultimo pago',
-            'Total pagado',
-        ];
+        return StandardExcelFormat::headings();
     }
 
     public function styles(Worksheet $sheet)

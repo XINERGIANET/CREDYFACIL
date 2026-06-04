@@ -69,7 +69,6 @@
 					<th>Cuotas pagadas</th>
 					<th>Cuotas totales</th>
 					<th>Importe cuota</th>
-					<th>Saldo capital</th>
 					<th>Cuotas en mora</th>
 					<th>Días mora (máx.)</th>
 					<th>Acciones</th>
@@ -87,7 +86,6 @@
 					<td>{{ $row->paid_quotas }}</td>
 					<td>{{ $row->total_quotas }}</td>
 					<td>S/{{ number_format($row->quota_amount, 2) }}</td>
-					<td>S/{{ number_format($row->capital_balance, 2) }}</td>
 					<td>{{ $row->overdue_quotas_count }}</td>
 					<td>{{ $row->days_overdue }}</td>
 					<td>

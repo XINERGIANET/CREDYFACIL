@@ -39,7 +39,7 @@ class ChargesExport implements FromCollection, WithHeadings, WithMapping, WithSt
             return $query->whereDate('date', '>=', $start_date);
         })->when($request->end_date, function ($query, $end_date) {
             return $query->whereDate('date', '<=', $end_date);
-        })->where('paid', 0)->orderBy('date')->get();
+        })->where('paid', 0)->with('contract.seller')->orderBy('date')->get();
 
         return $quotas;
 
@@ -47,26 +47,12 @@ class ChargesExport implements FromCollection, WithHeadings, WithMapping, WithSt
 
     public function map($quota): array
     {
-        return [
-            optional($quota->contract)->client(),
-            $quota->number,
-            optional($quota->contract)->quotas_number,
-            $quota->amount,
-            $quota->debt,
-            $quota->date->format('d/m/Y')
-        ];
+        return StandardExcelFormat::fromQuota($quota);
     }
 
     public function headings(): array
     {
-        return [
-            'Cliente',
-            'Número de cuota',
-            'Total cuotas',
-            'Monto',
-            'Saldo',
-            'Fecha de pago'
-        ];
+        return StandardExcelFormat::headings();
     }
 
     public function styles(Worksheet $sheet)

@@ -3,7 +3,6 @@
 namespace App\Exports;
 
 use App\Models\Contract;
-use App\Services\ClientPortfolioService;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -13,13 +12,6 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class EndingContractsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
-    protected $service;
-
-    public function __construct()
-    {
-        $this->service = app(ClientPortfolioService::class);
-    }
-
     public function collection()
     {
         $request = request();
@@ -47,39 +39,12 @@ class EndingContractsExport implements FromCollection, WithHeadings, WithMapping
 
     public function map($contract): array
     {
-        $paid = $this->service->paidQuotasCount($contract);
-        $balance = $this->service->capitalBalance($contract);
-
-        return [
-            $contract->client_type == 'Personal' ? $contract->name : $contract->group_name,
-            optional($contract->seller)->name,
-            $contract->requested_amount,
-            $contract->payable_amount,
-            $contract->quotas_number,
-            $paid,
-            $contract->date->format('d/m/Y'),
-            $contract->quota_amount,
-            $balance,
-            $contract->last_payment_date->format('d/m/Y'),
-            $contract->paid ? 'Pagado' : 'Pendiente',
-        ];
+        return StandardExcelFormat::fromContract($contract);
     }
 
     public function headings(): array
     {
-        return [
-            'Cliente/Grupo',
-            'Asesor C.',
-            'Monto solicitado',
-            'Monto de cartera',
-            'Número de cuotas',
-            'Cuotas pagadas',
-            'Fecha de desembolso',
-            'Monto de la cuota',
-            'Saldo capital',
-            'Fecha de última cuota',
-            'Estado',
-        ];
+        return StandardExcelFormat::headings();
     }
 
     public function styles(Worksheet $sheet)
