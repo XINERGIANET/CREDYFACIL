@@ -16,6 +16,8 @@ use App\Models\Quota;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\User;
+use App\Services\ClientPortfolioService;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class PaymentController extends Controller
 {
@@ -88,17 +90,21 @@ class PaymentController extends Controller
         return view('payments.charges', compact('quotas', 'sellers', 'payment_methods', 'nextQuotas'));
     }
 
-    public function dues(Request $request){
+    public function dues(Request $request, ClientPortfolioService $portfolioService){
         $user = auth()->user();
         $sellers = User::seller()->active()->get();
         $date = $request->date ? $request->date : now();
-        $quotas = Quota::active()->when($user->hasRole('seller'), function($query) use($user){
+
+        $overdueQuotas = Quota::active()->when($user->hasRole('seller'), function($query) use($user){
             return $query->whereHas('contract', function($query) use ($user){
                 return $query->where('seller_id', $user->id);
             });
         })->when($request->name, function($query, $name){
             return $query->whereHas('contract', function($query) use($name){
-                return $query->where('name', 'like', '%'.$name.'%');
+                return $query->where(function ($query) use ($name) {
+                    $query->where('name', 'like', '%'.$name.'%')
+                        ->orWhere('group_name', 'like', '%'.$name.'%');
+                });
             });
         })->when($request->seller_id, function($query, $seller_id){
             return $query->whereHas('contract', function($query) use($seller_id){
@@ -108,18 +114,52 @@ class PaymentController extends Controller
             return $query->whereRaw('DATEDIFF(?, date) >= ?', [now()->format('Y-m-d'), $from_days]);
         })->when($request->to_days, function($query, $to_days){
             return $query->whereRaw('DATEDIFF(?, date) <= ?', [now()->format('Y-m-d'), $to_days]);
-        })->whereDate('date', '<', $date)->where('paid', 0)->with('contract.seller')->paginate(20);
+        })
+            ->where('paid', 0)
+            ->where('debt', '>', 0)
+            ->whereDate('date', '<', $date)
+            ->with('contract.seller')
+            ->get();
 
-        $payment_methods = PaymentMethod::active()->get();
-
-        $nextQuotas = Quota::whereIn('contract_id', $quotas->pluck('contract_id'))
+        $grouped = $portfolioService->groupedOverdueClients($overdueQuotas);
+        $contractIds = $grouped->pluck('contract_id')->filter();
+        $nextQuotas = Quota::whereIn('contract_id', $contractIds)
             ->where('paid', 0)
             ->groupBy('contract_id')
             ->select('contract_id', DB::raw('MIN(number) as next_number'))
             ->get()
             ->pluck('next_number', 'contract_id');
 
-        return view('payments.dues', compact('quotas', 'sellers', 'payment_methods', 'nextQuotas'));
+        $grouped = $grouped->map(function ($row) use ($nextQuotas) {
+            $nextNum = $nextQuotas[$row->contract_id] ?? null;
+            $row->next_quota_id = null;
+            $row->next_quota_debt = 0;
+            $row->people = optional($row->contract)->people;
+
+            if ($row->contract_id && $nextNum) {
+                $nextQuota = Quota::where('contract_id', $row->contract_id)->where('number', $nextNum)->first();
+                if ($nextQuota) {
+                    $row->next_quota_id = $nextQuota->id;
+                    $row->next_quota_debt = $nextQuota->debt;
+                }
+            }
+
+            return $row;
+        });
+
+        $page = (int) $request->get('page', 1);
+        $perPage = 20;
+        $groupedClients = new LengthAwarePaginator(
+            $grouped->forPage($page, $perPage)->values(),
+            $grouped->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $payment_methods = PaymentMethod::active()->get();
+
+        return view('payments.dues', compact('groupedClients', 'sellers', 'payment_methods'));
     }
 
     public function store(Request $request){

@@ -112,21 +112,20 @@ class DisbursementDailyService
         $total = 0;
 
         foreach ($this->previousContracts($contract) as $prev) {
-            $lastQuotaNum = $prev->quotas()->max('number');
-            if (!$lastQuotaNum) {
-                continue;
-            }
+            $lastQuotaNum = (int) $prev->quotas()->max('number');
 
             $dayPayments = Payment::active()
                 ->with(['quota', 'payment_method'])
                 ->where('payment_method_id', $this->bcpMethodId)
                 ->whereDate('date', $date)
-                ->whereHas('quota', function ($query) use ($prev, $lastQuotaNum) {
-                    $query->where('contract_id', $prev->id)->where('number', $lastQuotaNum);
+                ->whereHas('quota', function ($query) use ($prev) {
+                    $query->where('contract_id', $prev->id);
                 })
+                ->orderBy('id')
                 ->get();
 
             foreach ($dayPayments as $payment) {
+                $quotaNumber = (int) optional($payment->quota)->number;
                 $amount = (float) $payment->amount;
                 $total += $amount;
                 $payments[] = [
@@ -134,7 +133,8 @@ class DisbursementDailyService
                     'amount' => $amount,
                     'contract_id' => $prev->id,
                     'contract_label' => $prev->client(),
-                    'quota_number' => $lastQuotaNum,
+                    'quota_number' => $quotaNumber,
+                    'is_last_quota' => $lastQuotaNum > 0 && $quotaNumber === $lastQuotaNum,
                     'date' => $payment->date->format('d/m/Y'),
                 ];
             }

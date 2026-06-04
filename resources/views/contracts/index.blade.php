@@ -17,7 +17,8 @@
                 <i class="ti ti-plus icon"></i> Crear nuevo
             </button>
             @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('operations'))
-                <a class="btn btn-info ms-2" href="{{ route('contracts.sentinel.excel') }}" target="_blank">
+                <a class="btn btn-info ms-2" href="{{ route('contracts.sentinel.excel', request()->all()) }}" target="_blank"
+                    title="Genera archivo Excel formato SBS con datos locales. No requiere API externa ni credenciales adicionales.">
                     <i class="ti ti-file-spreadsheet icon"></i> Sentinel
                 </a>
             @endif

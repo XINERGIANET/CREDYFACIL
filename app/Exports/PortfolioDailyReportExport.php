@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Quota;
 use App\Models\User;
 use App\Models\Goal;
+use App\Services\ClientPortfolioService;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromArray;
@@ -158,46 +159,12 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
 
     private function clientsAsOf($sellerId, Carbon $date): int
     {
-        return Contract::active()
-            ->where('approved', 1)
-            ->where('seller_id', $sellerId)
-            ->whereDate('date', '<=', $date)
-            ->where(function ($query) use ($date) {
-                $query->whereHas('quotas', function ($q) {
-                    $q->where('debt', '>', 0);
-                })->orWhereHas('quotas.payments', function ($q) use ($date) {
-                    $q->active()->whereDate('date', '>', $date);
-                });
-            })
-            ->selectRaw("COUNT(DISTINCT CONCAT(COALESCE(document,''),'|',COALESCE(group_name,''))) as total")
-            ->value('total') ?? 0;
+        return app(ClientPortfolioService::class)->clientsAsOfCount($sellerId, $date);
     }
 
     private function newClients($sellerId, Carbon $start, Carbon $end): int
     {
-        return Contract::active()
-            ->where('approved', 1)
-            ->where('seller_id', $sellerId)
-            ->whereDate('date', '>=', $start)
-            ->whereDate('date', '<=', $end)
-            ->whereNotExists(function ($query) use ($start) {
-                $query->select(\DB::raw(1))
-                    ->from('contracts as c2')
-                    ->where('c2.deleted', 0)
-                    ->where('c2.approved', 1)
-                    ->whereDate('c2.date', '<', $start)
-                    ->where(function ($q) {
-                        $q->where(function($sq){
-                            $sq->whereNotNull('contracts.document')
-                               ->whereColumn('c2.document', 'contracts.document');
-                        })->orWhere(function($sq){
-                            $sq->whereNotNull('contracts.group_name')
-                               ->whereColumn('c2.group_name', 'contracts.group_name');
-                        });
-                    });
-            })
-            ->selectRaw("COUNT(DISTINCT CONCAT(COALESCE(document,''),'|',COALESCE(group_name,''))) as total")
-            ->value('total') ?? 0;
+        return app(ClientPortfolioService::class)->newClientContracts($sellerId, $start, $end)->count();
     }
 
     private function walletAsOf($sellerId, Carbon $date): float

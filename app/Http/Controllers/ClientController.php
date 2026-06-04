@@ -11,24 +11,26 @@ use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\InactiveClientsExport;
+use App\Services\ClientPortfolioService;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ClientController extends Controller
 {
-    public function index(Request $request){
+    public function index(Request $request, ClientPortfolioService $portfolioService){
         $user = auth()->user();
         $sellers = User::seller()->where('state', 0)->active()->get();
-        $clients = Contract::active()->when($user->hasRole('seller'), function($query) use($user){
-            return $query->where('seller_id', $user->id);
-        })->when($request->name, function($query, $name){
-            return $query->where('name', 'like', '%'.$name.'%');
-        })->when($request->seller_id, function($query, $seller_id){
-            return $query->where('seller_id', $seller_id);
-        })->when($request->start_date, function($query, $start_date){
-            return $query->whereDate('date', '>=', $start_date);
-        })->when($request->end_date, function($query, $end_date){
-            return $query->whereDate('date', '<=', $end_date);
-        })->latest('date')->latest('id')->groupBy('document')->groupBy('group_name')->paginate(20);
-        
+        $all = $portfolioService->clientsListingQuery($user, $request)->get();
+        $deduped = $portfolioService->dedupeLatestPerClient($all);
+        $page = (int) $request->get('page', 1);
+        $perPage = 20;
+        $clients = new LengthAwarePaginator(
+            $deduped->forPage($page, $perPage)->values(),
+            $deduped->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
         return view('clients.index', compact('clients', 'sellers'));
     }
 

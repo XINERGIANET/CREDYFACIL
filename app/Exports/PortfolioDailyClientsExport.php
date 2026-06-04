@@ -2,8 +2,9 @@
 
 namespace App\Exports;
 
-use App\Models\Contract;
 use App\Services\ClientPortfolioService;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -11,30 +12,27 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class PortfolioDailyClientsExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
+    protected $contracts;
+    protected $asOfDate;
     protected $service;
 
-    public function __construct()
+    public function __construct(Collection $contracts, $asOfDate)
     {
+        $this->contracts = $contracts;
+        $this->asOfDate = Carbon::parse($asOfDate);
         $this->service = app(ClientPortfolioService::class);
     }
 
     public function collection()
     {
-        $user = auth()->user();
-        $request = request();
-
-        $contracts = $this->service->clientsListingQuery($user, $request)
-            ->with('seller')
-            ->get();
-
-        return $this->service->dedupeLatestPerClient($contracts);
+        return $this->contracts;
     }
 
     public function map($contract): array
     {
-        $row = $this->service->contractExportRow($contract);
+        $row = $this->service->contractExportRow($contract, $this->asOfDate);
 
         return [
             $row['origin_seller'],
@@ -51,6 +49,7 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
             $row['total_quotas'],
             $row['paid_quotas'],
             $row['quota_amount'],
+            $row['balance_as_of'],
         ];
     }
 
@@ -65,12 +64,13 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
             'Dirección',
             'Estado Civil',
             'Tipo de Cliente',
-            'Monto del crédito otorgado',
-            'Saldo del crédito (capital)',
+            'Monto del crédito',
+            'Saldo capital',
             'Fecha de desembolso',
             'Cuotas totales',
             'Cuotas pagadas',
-            'Costo por cuota',
+            'Monto por cuota',
+            'Saldo del crédito',
         ];
     }
 

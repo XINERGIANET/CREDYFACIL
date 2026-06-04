@@ -19,6 +19,8 @@ use App\Models\Goal;
 use App\Models\AccountMovement;
 use App\Models\PaymentMethod;
 use App\Exports\PortfolioDailyReportExport;
+use App\Exports\PortfolioDailyClientsExport;
+use App\Services\ClientPortfolioService;
 use Maatwebsite\Excel\Facades\Excel;
 
 class WebController extends Controller
@@ -39,6 +41,21 @@ class WebController extends Controller
         $name = 'Reporte_Cartera_Credyfacil_' . $date->format('d_m_Y') . '.xlsx';
 
         return Excel::download(new PortfolioDailyReportExport($date->format('Y-m-d')), $name);
+    }
+
+    public function portfolioDailyClientsExcel(Request $request, ClientPortfolioService $portfolioService)
+    {
+        $sellerId = $request->seller_id ?: null;
+        $date = $request->date ? Carbon::parse($request->date) : today();
+        $metric = $request->metric ?: 'current_clients';
+        $contracts = $this->contractsForPortfolioMetric($metric, $sellerId, $date, $portfolioService);
+        $sellerLabel = $sellerId ? optional(User::find($sellerId))->name : 'Todos';
+        $name = 'Clientes_Cartera_' . preg_replace('/[^A-Za-z0-9_]/', '_', $sellerLabel) . '_' . $date->format('d_m_Y') . '.xlsx';
+
+        return Excel::download(
+            new PortfolioDailyClientsExport($contracts, $date->format('Y-m-d')),
+            $name
+        );
     }
 
     public function index(Request $request){
@@ -743,58 +760,36 @@ class WebController extends Controller
 
     private function activeContractsAsOf($sellerId, Carbon $date)
     {
-        return Contract::active()
-            ->where('approved', 1)
-            ->when($sellerId, function ($query, $sellerId) {
-                return $query->where('seller_id', $sellerId);
-            })
-            ->whereDate('date', '<=', $date)
-            ->where(function ($query) use ($date) {
-                $query->whereHas('quotas', function ($q) {
-                    $q->where('debt', '>', 0);
-                })->orWhereHas('quotas.payments', function ($q) use ($date) {
-                    $q->active()->whereDate('date', '>', $date);
-                });
-            })
-            ->with('seller')
-            ->get()
-            ->unique(function ($contract) {
-                return ($contract->document ?: '') . '|' . ($contract->group_name ?: '');
-            })
-            ->values();
+        return app(ClientPortfolioService::class)->activeContractsAsOf($sellerId, $date);
     }
 
     private function newClientContracts($sellerId, Carbon $start, Carbon $end)
     {
-        return Contract::active()
-            ->where('approved', 1)
-            ->when($sellerId, function ($query, $sellerId) {
-                return $query->where('seller_id', $sellerId);
-            })
-            ->whereDate('date', '>=', $start)
-            ->whereDate('date', '<=', $end)
-            ->whereNotExists(function ($query) use ($start) {
-                $query->select(DB::raw(1))
-                    ->from('contracts as c2')
-                    ->where('c2.deleted', 0)
-                    ->where('c2.approved', 1)
-                    ->whereDate('c2.date', '<', $start)
-                    ->where(function ($q) {
-                        $q->where(function ($sq) {
-                            $sq->whereNotNull('contracts.document')
-                                ->whereColumn('c2.document', 'contracts.document');
-                        })->orWhere(function ($sq) {
-                            $sq->whereNotNull('contracts.group_name')
-                                ->whereColumn('c2.group_name', 'contracts.group_name');
-                        });
-                    });
-            })
-            ->with('seller')
-            ->get()
-            ->unique(function ($contract) {
-                return ($contract->document ?: '') . '|' . ($contract->group_name ?: '');
-            })
-            ->values();
+        return app(ClientPortfolioService::class)->newClientContracts($sellerId, $start, $end);
+    }
+
+    private function contractsForPortfolioMetric(string $metric, $sellerId, Carbon $date, ClientPortfolioService $service)
+    {
+        $monthStart = $date->copy()->startOfMonth();
+        $initialDate = $monthStart->copy()->subDay();
+        $previousStart = $date->copy()->subMonthNoOverflow()->startOfMonth();
+        $previousEnd = $date->copy()->subMonthNoOverflow()->endOfMonth();
+
+        switch ($metric) {
+            case 'initial_clients':
+                return $service->activeContractsAsOf($sellerId, $initialDate);
+            case 'new_clients':
+                return $service->newClientContracts($sellerId, $monthStart, $date);
+            case 'previous_disbursement':
+            case 'previous_operations':
+                return $this->contractsBetween($sellerId, $previousStart, $previousEnd);
+            case 'current_disbursement':
+            case 'current_operations':
+                return $this->contractsBetween($sellerId, $monthStart, $date);
+            case 'current_clients':
+            default:
+                return $service->activeContractsAsOf($sellerId, $date);
+        }
     }
 
     private function contractsBetween($sellerId, Carbon $start, Carbon $end)
@@ -851,15 +846,7 @@ class WebController extends Controller
 
     private function contractDebtAsOf($contractId, Carbon $date): float
     {
-        $currentDebt = (float) Quota::where('contract_id', $contractId)->sum('debt');
-        $futurePayments = (float) Payment::active()
-            ->whereDate('payments.date', '>', $date)
-            ->whereHas('quota', function ($query) use ($contractId) {
-                return $query->where('contract_id', $contractId);
-            })
-            ->sum('amount');
-
-        return $currentDebt + $futurePayments;
+        return app(ClientPortfolioService::class)->contractDebtAsOf($contractId, $date);
     }
 
     private function contractActiveReason($contractId, Carbon $date): string

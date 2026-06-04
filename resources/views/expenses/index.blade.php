@@ -169,7 +169,7 @@
 						@if($row['bcp_retainage'] > 0)
 						<span class="text-info fw-semibold">S/{{ number_format($row['bcp_retainage'], 2) }}</span>
 						@if(count($row['bcp_payments']) > 0)
-						<div class="small text-muted">{{ count($row['bcp_payments']) }} pago(s) últ. cuota</div>
+						<div class="small text-muted">{{ count($row['bcp_payments']) }} pago(s) BCP del día</div>
 						@endif
 						@else
 						<span class="text-muted">—</span>
@@ -383,7 +383,7 @@
 				<div class="col-lg-12 d-none" id="contractRetanqueoAlert">
 					<div class="alert alert-info py-2 mb-0">
 						<div><strong>Monto solicitado:</strong> S/<span id="infoRequested">0.00</span></div>
-						<div><strong>Retanqueo BCP (últ. cuota del día):</strong> S/<span id="infoBcp">0.00</span></div>
+						<div><strong>Retanqueo BCP (cuotas pagadas ese día):</strong> S/<span id="infoBcp">0.00</span></div>
 						<div><strong>Neto sugerido a entregar:</strong> S/<span id="infoNet" class="fw-bold">0.00</span></div>
 						<div class="small mt-1" id="infoBcpDetail"></div>
 					</div>
@@ -563,7 +563,7 @@
 					detail += '<div>• ' + p.contract_label + ' cuota #' + p.quota_number + ': S/' + parseFloat(p.amount).toFixed(2) + '</div>';
 				});
 			} else {
-				detail = 'Sin retanqueo BCP en la última cuota del día.';
+				detail = 'Sin retanqueo BCP en contratos previos ese día.';
 			}
 			$('#infoBcpDetail').html(detail);
 			$('#contractRetanqueoAlert').removeClass('d-none');
@@ -585,7 +585,7 @@
 			});
 			bcpHtml += '</ul>';
 		} else {
-			bcpHtml = '<span class="text-muted">No aplica retanqueo BCP en última cuota del día.</span>';
+			bcpHtml = '<span class="text-muted">No aplica retanqueo BCP ese día.</span>';
 		}
 		var prevHtml = '';
 		if(d.previous_contracts && d.previous_contracts.length){

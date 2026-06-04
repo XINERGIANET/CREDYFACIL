@@ -63,52 +63,58 @@
 				<tr>
 					<th>Cliente</th>
 					<th>Asesor</th>
-					<th>Número de cuota</th>
-					<th>Monto</th>
-					<th>Saldo</th>
-					<th>Fecha de pago</th>
-					<th>Días de mora</th>
+					<th>Deuda total (mora)</th>
+					<th>Monto prestado</th>
+					<th>Fecha desembolso</th>
+					<th>Cuotas pagadas</th>
+					<th>Cuotas totales</th>
+					<th>Importe cuota</th>
+					<th>Saldo capital</th>
+					<th>Cuotas en mora</th>
+					<th>Días mora (máx.)</th>
 					<th>Acciones</th>
 				</tr>
 			</thead>
 			<tbody>
-				@if($quotas->count() > 0)
-				@foreach($quotas as $quota)
+				@if($groupedClients->count() > 0)
+				@foreach($groupedClients as $row)
 				<tr>
-					<td>{{ optional($quota->contract)->client() }}</td>
-					<td>{{ optional($quota->contract->seller)->name }}</td>
-					<td>{{ $quota->number }}</td>
-					<td>{{ $quota->amount }}</td>
-					<td>{{ $quota->debt }}</td>
-					<td>{{ $quota->date->format('d/m/Y') }}</td>
-					<td>{{ $quota->date->diffInDays(now()) }}</td>
+					<td>{{ $row->client_name }}</td>
+					<td>{{ $row->seller_name }}</td>
+					<td class="text-danger fw-semibold">S/{{ number_format($row->total_overdue_debt, 2) }}</td>
+					<td>S/{{ number_format($row->requested_amount, 2) }}</td>
+					<td>{{ $row->disbursement_date }}</td>
+					<td>{{ $row->paid_quotas }}</td>
+					<td>{{ $row->total_quotas }}</td>
+					<td>S/{{ number_format($row->quota_amount, 2) }}</td>
+					<td>S/{{ number_format($row->capital_balance, 2) }}</td>
+					<td>{{ $row->overdue_quotas_count }}</td>
+					<td>{{ $row->days_overdue }}</td>
 					<td>
-						@php
-							$isNext = $quota->number == ($nextQuotas[$quota->contract_id] ?? null);
-						@endphp
-						<button class="btn btn-primary btn-pay" 
-							data-contract-id="{{ $quota->contract_id }}"
-							{{ $isNext ? '' : 'disabled' }}
-							data-quota-id="{{ $quota->id }}"
-							data-amount="{{ $quota->debt }}"
-							data-client="{{ $quota->contract->client() }}"
-							data-people="{{ $quota->contract->people }}"
-							title="{{ $isNext ? 'Cobrar' : 'Debe cobrar la cuota anterior' }}">
+						@if($row->next_quota_id)
+						<button class="btn btn-primary btn-pay"
+							data-contract-id="{{ $row->contract_id }}"
+							data-quota-id="{{ $row->next_quota_id }}"
+							data-amount="{{ $row->next_quota_debt }}"
+							data-client="{{ $row->client_name }}"
+							data-people="{{ optional($row->contract)->people }}"
+							title="Cobrar siguiente cuota">
 							<i class="ti ti-cash"></i>
 						</button>
+						@endif
 					</td>
 				@endforeach
 				@else
 				<tr>
-					<td colspan="8" align="center">No se han encontrado resultados</td>
+					<td colspan="12" align="center">No se han encontrado resultados</td>
 				</tr>
 				@endif
 			</tbody>
 		</table>
 	</div>
-	@if($quotas->hasPages())
+	@if($groupedClients->hasPages())
 	<div class="card-footer d-flex align-items-center">
-		{{ $quotas->withQueryString()->links() }}
+		{{ $groupedClients->withQueryString()->links() }}
 	</div>
 	@endif
 </div>

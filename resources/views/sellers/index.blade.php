@@ -62,12 +62,11 @@
 										</button>
 									</td>
 									<td>
-										S/ {{ $seller->contracts()->sum('payable_amount') }}
+										S/ {{ number_format($seller->total_disbursed, 2) }}
 									</td>
 									<td>
 										<button class="btn btn-link btn-overdue text-danger p-0" data-id="{{ $seller->id }}">
-											{{ $seller->contracts()->whereHas('quotas', function ($q) {
-							$q->where('paid', 0)->whereDate('date', '<', now()); })->count() }}
+											{{ $seller->overdue_clients_count }}
 										</button>
 									</td>
 									<td>{{ $seller->state == 0 ? 'Activo' : 'Inactivo' }}</td>
@@ -574,13 +573,13 @@
 					var total = 0;
 					if (data.status && data.contracts.length > 0) {
 						data.contracts.forEach(function (contract) {
-							total += parseFloat(contract.payable_amount);
+							var debt = parseFloat(contract.overdue_debt || 0);
+							total += debt;
 							html += `
 												<tr>
-													<td>${contract.document}</td>
+													<td>${contract.document || ''}</td>
 													<td>${contract.group_name || contract.name}</td>
-													<td>S/ ${contract.payable_amount}</td>
-
+													<td>S/ ${debt.toFixed(2)}</td>
 													<td>${contract.days_overdue}</td>
 												</tr>
 											`;
