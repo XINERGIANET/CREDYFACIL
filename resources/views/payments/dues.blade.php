@@ -227,11 +227,28 @@
 		$('#payModal').modal('show');
 	});
 
+	function buildPayFormData() {
+		var fd = new FormData();
+		fd.append('contract_id', $('#pay_contract_id').val());
+		fd.append('quota_id', $('#pay_quota_id').val());
+		fd.append('amount', $('#pay_amount').val());
+		fd.append('payment_method_id', $('#pay_payment_method_id').val());
+		fd.append('date', $('#pay_date').val());
+		$('#divPeople input[name="people[]"]:checked').each(function() {
+			fd.append('people[]', $(this).val());
+		});
+		var fileInput = document.getElementById('pay_image');
+		if (fileInput && fileInput.files && fileInput.files.length > 0) {
+			fd.append('image', fileInput.files[0]);
+		}
+		return fd;
+	}
+
 	$('#payForm').submit(function(e) {
 		e.preventDefault();
 		$('#btn-save-pay').prop('disabled', true);
 
-		var fd = new FormData(this);
+		var fd = buildPayFormData();
 
 		$.ajax({
 			url: '{{ route('payments.store') }}',

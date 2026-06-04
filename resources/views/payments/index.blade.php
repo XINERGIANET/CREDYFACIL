@@ -409,13 +409,17 @@
             fd.append('amount', $('#amount').val());
             fd.append('payment_method_id', $('#payment_method_id').val());
             fd.append('date', $('#date').val());
-            fd.append('image', $('#image')[0].files[0]);
 
             $('input[type="checkbox"][name="people[]"]').each(function() {
                 if (this.checked) {
-                    fd.append($(this).attr('name'), $(this).val());
+                    fd.append('people[]', $(this).val());
                 }
             });
+
+            var imageInput = document.getElementById('image');
+            if (imageInput && imageInput.files && imageInput.files.length > 0) {
+                fd.append('image', imageInput.files[0]);
+            }
 
 
             $.ajax({

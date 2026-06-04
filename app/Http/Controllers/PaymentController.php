@@ -18,6 +18,7 @@ use App\Models\PaymentMethod;
 use App\Models\User;
 use App\Services\ClientPortfolioService;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -170,8 +171,9 @@ class PaymentController extends Controller
         $validator = Validator::make($request->all(), [
             'quota_id' => 'required',
             'amount' => 'required|numeric|min:0.1',
-            'payment_method_id' => 'required',
-            'date' => 'required|date'
+            'payment_method_id' => 'required|integer|exists:payment_methods,id',
+            'date' => 'required|date',
+            'image' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
         $quota = Quota::find($request->quota_id);
@@ -240,15 +242,18 @@ class PaymentController extends Controller
 
             $image = null;
 
-            if($request->hasFile('image')){
-                $image = $request->image->store('payments', 'public');
+            if ($request->hasFile('image') && $request->file('image')->isValid()) {
+                $image = $request->file('image')->store('payments', 'public');
             }
+
+            $paymentMethodId = (int) $request->input('payment_method_id');
+            $paymentDate = Carbon::parse($request->input('date'))->format('Y-m-d');
             
             Payment::create([
                 'quota_id' => $request->quota_id,
                 'amount' => $request->amount,
-                'payment_method_id' => $request->payment_method_id,
-                'date' => $request->date,
+                'payment_method_id' => $paymentMethodId,
+                'date' => $paymentDate,
                 'due_days' => $due_days,
                 'image' => $image,
                 'people' => $people
@@ -271,11 +276,17 @@ class PaymentController extends Controller
 
             DB::commit();
 
-        }catch(Exception $e){
+        } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error('Error al registrar pago: ' . $e->getMessage(), [
+                'quota_id' => $request->quota_id,
+                'payment_method_id' => $request->input('payment_method_id'),
+                'has_image' => $request->hasFile('image'),
+            ]);
 
             return response()->json([
-                'status' => false
+                'status' => false,
+                'error' => 'No se pudo guardar el pago. Verifique el método de pago y la imagen (máx. 5 MB, JPG/PNG/WEBP).',
             ]);
         }
 

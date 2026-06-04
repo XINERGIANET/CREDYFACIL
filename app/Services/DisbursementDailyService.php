@@ -13,16 +13,32 @@ use Illuminate\Support\Collection;
 
 class DisbursementDailyService
 {
-    protected $bcpMethodId;
+    protected $bcpMethodIds = null;
 
-    public function __construct()
+    public function bcpMethodIds(): array
     {
-        $this->bcpMethodId = PaymentMethod::whereRaw('UPPER(name) LIKE ?', ['%BCP%'])->value('id');
+        if ($this->bcpMethodIds === null) {
+            $this->bcpMethodIds = PaymentMethod::whereRaw('UPPER(name) LIKE ?', ['%BCP%'])
+                ->pluck('id')
+                ->map(function ($id) {
+                    return (int) $id;
+                })
+                ->all();
+        }
+
+        return $this->bcpMethodIds;
     }
 
     public function bcpMethodId()
     {
-        return $this->bcpMethodId;
+        $ids = $this->bcpMethodIds();
+
+        return $ids[0] ?? null;
+    }
+
+    protected function applyBcpPaymentFilter($query)
+    {
+        return $query->bcp();
     }
 
     public function dailyContracts(Carbon $date, User $user, $sellerId = null): Collection
@@ -104,7 +120,7 @@ class DisbursementDailyService
 
     public function bcpRetanqueo(Contract $contract, Carbon $date): array
     {
-        if (!$this->bcpMethodId) {
+        if (empty($this->bcpMethodIds())) {
             return ['amount' => 0, 'payments' => []];
         }
 
@@ -114,10 +130,9 @@ class DisbursementDailyService
         foreach ($this->previousContracts($contract) as $prev) {
             $lastQuotaNum = (int) $prev->quotas()->max('number');
 
-            $dayPayments = Payment::active()
+            $dayPayments = $this->applyBcpPaymentFilter(Payment::active())
                 ->with(['quota', 'payment_method'])
-                ->where('payment_method_id', $this->bcpMethodId)
-                ->whereDate('date', $date)
+                ->whereDate('date', $date->toDateString())
                 ->whereHas('quota', function ($query) use ($prev) {
                     $query->where('contract_id', $prev->id);
                 })
@@ -148,25 +163,20 @@ class DisbursementDailyService
 
     public function dayBcpPayments(Carbon $date, User $user, $sellerId = null): Collection
     {
-        if (!$this->bcpMethodId) {
+        if (empty($this->bcpMethodIds())) {
             return collect();
         }
 
-        $contractIds = $this->dailyContractsQuery($date, $user, $sellerId)->pluck('id');
+        $dailyContracts = $this->dailyContracts($date, $user, $sellerId);
 
-        if ($contractIds->isEmpty()) {
+        if ($dailyContracts->isEmpty()) {
             return collect();
         }
 
-        $clientKeys = $this->dailyContracts($date, $user, $sellerId)->map(function (Contract $contract) {
-            return $this->clientKey($contract);
-        })->unique()->filter()->values();
-
-        return Payment::active()
+        return $this->applyBcpPaymentFilter(Payment::active())
             ->with(['quota.contract.seller', 'payment_method'])
-            ->where('payment_method_id', $this->bcpMethodId)
-            ->whereDate('date', $date)
-            ->whereHas('quota.contract', function ($query) use ($user, $sellerId, $clientKeys) {
+            ->whereDate('date', $date->toDateString())
+            ->whereHas('quota.contract', function ($query) use ($user, $sellerId, $dailyContracts) {
                 $query->active()->where('approved', 1)
                     ->when($user->hasRole('seller'), function ($q) use ($user) {
                         return $q->where('seller_id', $user->id);
@@ -174,14 +184,15 @@ class DisbursementDailyService
                     ->when($sellerId, function ($q, $sellerId) {
                         return $q->where('seller_id', $sellerId);
                     })
-                    ->where(function ($q) use ($clientKeys) {
-                        foreach ($clientKeys as $key) {
-                            $parts = explode('|', $key);
-                            $q->orWhere(function ($sub) use ($parts) {
-                                if ($parts[0] !== '') {
-                                    $sub->where('document', $parts[0]);
+                    ->where(function ($q) use ($dailyContracts) {
+                        foreach ($dailyContracts as $contract) {
+                            $q->orWhere(function ($sub) use ($contract) {
+                                if ($contract->document) {
+                                    $sub->where('document', $contract->document);
+                                } elseif ($contract->group_name) {
+                                    $sub->where('group_name', $contract->group_name);
                                 } else {
-                                    $sub->where('group_name', $parts[1]);
+                                    $sub->where('id', $contract->id);
                                 }
                             });
                         }
