@@ -18,6 +18,7 @@ class PaymentsExport implements FromCollection, WithHeadings, WithMapping, WithS
         $request = request();
 
         return Payment::active()
+            ->whereHas('quota.contract')
             ->when($user->hasRole('seller'), function ($query) use ($user) {
                 return $query->whereHas('quota.contract', function ($query) use ($user) {
                     return $query->where('seller_id', $user->id);

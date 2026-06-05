@@ -48,6 +48,18 @@ class StandardExcelFormat
             $deudaTotal = $service->totalDebt($display);
         }
 
+        $fechaDesembolso = isset($options['payment_date'])
+            ? $options['payment_date']
+            : ($display->date ? $display->date->format('d/m/Y') : '');
+
+        $montoCuota = isset($options['payment_amount'])
+            ? round((float) $options['payment_amount'], 2)
+            : round((float) $display->quota_amount, 2);
+
+        $cuotasCanceladas = isset($options['quota_number'])
+            ? (int) $options['quota_number']
+            : $service->paidQuotasCount($display);
+
         return [
             $origin ? $origin->name : optional($display->seller)->name,
             optional($display->seller)->name,
@@ -57,10 +69,10 @@ class StandardExcelFormat
             $display->phone ?: '',
             round((float) $display->requested_amount, 2),
             round((float) $display->payable_amount, 2),
-            $display->date ? $display->date->format('d/m/Y') : '',
-            round((float) $display->quota_amount, 2),
+            $fechaDesembolso,
+            $montoCuota,
             (int) $display->quotas_number,
-            $service->paidQuotasCount($display),
+            $cuotasCanceladas,
             $daysOverdue,
             round($deudaTotal, 2),
         ];
@@ -91,6 +103,10 @@ class StandardExcelFormat
 
         return self::fromContract($contract, [
             'days_overdue' => (int) ($payment->due_days ?? 0),
+            'deuda_total' => (float) $payment->amount,
+            'payment_amount' => (float) $payment->amount,
+            'payment_date' => $payment->date ? $payment->date->format('d/m/Y') : '',
+            'quota_number' => $payment->quota ? (int) $payment->quota->number : 0,
         ]);
     }
 

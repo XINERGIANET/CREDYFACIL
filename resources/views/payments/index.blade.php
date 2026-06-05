@@ -544,6 +544,14 @@
 
         function exportExcel() {
             const params = new URLSearchParams(window.location.search);
+            const form = document.querySelector('.card-body.border-bottom form');
+            if (form) {
+                new FormData(form).forEach(function (value, key) {
+                    if (value) {
+                        params.set(key, value);
+                    }
+                });
+            }
             const url = `{{ route('payments.excel') }}?${params.toString()}`;
             window.location.href = url;
         }
