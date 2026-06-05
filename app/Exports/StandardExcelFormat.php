@@ -68,11 +68,13 @@ class StandardExcelFormat
 
     public static function fromGroupedOverdue(object $row): array
     {
-        if (!$row->contract) {
+        $contract = self::resolveContract($row->contract ?? null);
+
+        if (!$contract) {
             return array_fill(0, 14, '');
         }
 
-        return self::fromContract($row->contract, [
+        return self::fromContract($contract, [
             'days_overdue' => (int) ($row->days_overdue ?? 0),
             'deuda_total' => (float) ($row->total_overdue_debt ?? 0),
         ]);
@@ -80,7 +82,8 @@ class StandardExcelFormat
 
     public static function fromPayment(Payment $payment): array
     {
-        $contract = optional(optional($payment->quota)->contract);
+        $payment->loadMissing('quota.contract.seller');
+        $contract = $payment->quota ? self::resolveContract($payment->quota->contract) : null;
 
         if (!$contract) {
             return array_fill(0, 14, '');
@@ -93,7 +96,8 @@ class StandardExcelFormat
 
     public static function fromQuota($quota): array
     {
-        $contract = optional($quota->contract);
+        $quota->loadMissing('contract.seller');
+        $contract = self::resolveContract($quota->contract);
 
         if (!$contract) {
             return array_fill(0, 14, '');
@@ -150,6 +154,11 @@ class StandardExcelFormat
         $docs = array_filter(array_column($people, 'document'));
 
         return $docs ? implode(', ', $docs) : (string) ($contract->group_name ?? '');
+    }
+
+    protected static function resolveContract($value): ?Contract
+    {
+        return $value instanceof Contract ? $value : null;
     }
 
     protected static function maxOverdueDays(Contract $contract): int
