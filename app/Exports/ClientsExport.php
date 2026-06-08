@@ -34,12 +34,16 @@ class ClientsExport implements FromCollection, WithHeadings, WithMapping, WithSt
 
     public function map($contract): array
     {
-        return StandardExcelFormat::fromContract($contract);
+        return array_merge(StandardExcelFormat::fromContract($contract), [
+            $this->service->portfolioClientType($contract),
+        ]);
     }
 
     public function headings(): array
     {
-        return StandardExcelFormat::headings();
+        return array_merge(StandardExcelFormat::headings(), [
+            'Tipo de Cliente',
+        ]);
     }
 
     public function styles(Worksheet $sheet)

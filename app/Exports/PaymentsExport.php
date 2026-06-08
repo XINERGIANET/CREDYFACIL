@@ -55,12 +55,16 @@ class PaymentsExport implements FromCollection, WithHeadings, WithMapping, WithS
 
     public function map($payment): array
     {
-        return StandardExcelFormat::fromPayment($payment);
+        return array_merge(StandardExcelFormat::fromPayment($payment), [
+            optional($payment->payment_method)->name ?? '',
+        ]);
     }
 
     public function headings(): array
     {
-        return StandardExcelFormat::headings();
+        return array_merge(StandardExcelFormat::headings(), [
+            'Metodo de pago',
+        ]);
     }
 
     public function styles(Worksheet $sheet)
