@@ -314,7 +314,7 @@
 								<i class="ti ti-pencil icon"></i>
 							</button>
 							@if($expense->image)
-							<a class="btn btn-primary btn-icon" href="{{ asset('storage/'.$expense->image) }}" target="_blank">
+							<a class="btn btn-primary btn-icon" href="{{ route('expenses.image', $expense->id) }}" target="_blank">
 								<i class="ti ti-photo icon"></i>
 							</a>
 							@endif

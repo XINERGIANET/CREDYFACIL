@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use App\Exports\ExpensesExport;
 use App\Exports\ExpensesCashExport;
 use App\Exports\DisbursementsDailyExport;
@@ -428,6 +429,26 @@ class ExpenseController extends Controller
     public function excel_cash(Request $request){
         $name = "Egresos_caja_".now()->format('d_m_Y').".xlsx";
         return Excel::download(new ExpensesCashExport, $name);
+    }
+
+    public function image(Expense $expense)
+    {
+        $user = auth()->user();
+
+        if ($user->hasRole('seller') && (int) $expense->seller_id !== (int) $user->id) {
+            abort(403);
+        }
+
+        if (!$expense->image || !Storage::disk('public')->exists($expense->image)) {
+            abort(404);
+        }
+
+        $path = Storage::disk('public')->path($expense->image);
+        $mime = mime_content_type($path) ?: 'application/octet-stream';
+
+        return response()->file($path, [
+            'Content-Type' => $mime,
+        ]);
     }
 
 }

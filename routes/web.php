@@ -80,6 +80,7 @@ Route::middleware('auth')->group(function () {
 	Route::post('expenses/daily-check', [ExpenseController::class, 'toggleDailyCheck'])->name('expenses.daily-check');
 	Route::get('expenses/index_cash', [ExpenseController::class, 'index_cash'])->name('expenses.index_cash');
 	Route::get('expenses/excel_cash', [ExpenseController::class, 'excel_cash'])->name('expenses.excel_cash');
+	Route::get('expenses/{expense}/image', [ExpenseController::class, 'image'])->name('expenses.image');
 	Route::resource('expenses', ExpenseController::class);
 });
 
