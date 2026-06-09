@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use App\Exports\ExpensesExport;
 use App\Exports\ExpensesCashExport;
 use App\Exports\DisbursementsDailyExport;
@@ -268,40 +269,68 @@ class ExpenseController extends Controller
             ]);
         }
 
+        if ($request->contract_id && Expense::activeDisbursementExists((int) $request->contract_id)) {
+            return response()->json([
+                'status' => false,
+                'error' => 'Ya existe un desembolso registrado para este préstamo. Edite o elimine el registro existente.',
+            ]);
+        }
+
         $image = null;
 
         if($request->hasFile('image')){
             $image = $request->image->store('expenses', 'public');
         }
 
-        $expense = Expense::create([
-            'description' => $request->description,
-            'seller_id' => $request->seller_id,
-            'contract_id' => $request->contract_id,
-            'payment_method_id' => $request->payment_method_id,
-            'date' => $request->date,
-            'image' => $image
-        ]);
+        try {
+            DB::transaction(function () use ($request, $image, &$expense) {
+                if ($request->contract_id) {
+                    $exists = Expense::active()
+                        ->where('contract_id', (int) $request->contract_id)
+                        ->lockForUpdate()
+                        ->exists();
 
-        // Guardar métodos de pago asociados (tabla expenses_payments) con montos
-        if ($expense) {
-            ExpensePayment::where('expenses_id', $expense->id)->delete();
+                    if ($exists) {
+                        throw new \RuntimeException('duplicate_disbursement');
+                    }
+                }
 
-            if ($request->payment_method_id) {
-                ExpensePayment::create([
-                    'expenses_id' => $expense->id,
+                $expense = Expense::create([
+                    'description' => $request->description,
+                    'seller_id' => $request->seller_id,
+                    'contract_id' => $request->contract_id,
                     'payment_method_id' => $request->payment_method_id,
-                    'amount' => $request->payment_amount
+                    'date' => $request->date,
+                    'image' => $image
+                ]);
+
+                ExpensePayment::where('expenses_id', $expense->id)->delete();
+
+                if ($request->payment_method_id) {
+                    ExpensePayment::create([
+                        'expenses_id' => $expense->id,
+                        'payment_method_id' => $request->payment_method_id,
+                        'amount' => $request->payment_amount
+                    ]);
+                }
+
+                if ($request->payment_method_id_2 && $request->payment_amount_2) {
+                    ExpensePayment::create([
+                        'expenses_id' => $expense->id,
+                        'payment_method_id' => $request->payment_method_id_2,
+                        'amount' => $request->payment_amount_2
+                    ]);
+                }
+            });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'duplicate_disbursement') {
+                return response()->json([
+                    'status' => false,
+                    'error' => 'Ya existe un desembolso registrado para este préstamo. Edite o elimine el registro existente.',
                 ]);
             }
 
-            if ($request->payment_method_id_2 && $request->payment_amount_2) {
-                ExpensePayment::create([
-                    'expenses_id' => $expense->id,
-                    'payment_method_id' => $request->payment_method_id_2,
-                    'amount' => $request->payment_amount_2
-                ]);
-            }
+            throw $e;
         }
 
         return response()->json([

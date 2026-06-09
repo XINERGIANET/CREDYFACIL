@@ -51,5 +51,14 @@ class Expense extends Model
         return (float) $this->expensePayments()->sum('amount');
     }
 
+    public static function activeDisbursementExists(int $contractId, ?int $exceptId = null): bool
+    {
+        return static::active()
+            ->where('contract_id', $contractId)
+            ->when($exceptId, function ($query) use ($exceptId) {
+                return $query->where('id', '!=', $exceptId);
+            })
+            ->exists();
+    }
 
 }

@@ -380,6 +380,11 @@
   			  			</select>
   			  		</div>
   			  	</div>
+				<div class="col-lg-12 d-none" id="contractDisbursedAlert">
+					<div class="alert alert-warning py-2 mb-0">
+						<strong>Desembolso ya registrado.</strong> Este préstamo ya tiene un egreso activo por S/<span id="infoDisbursedAmt">0.00</span>. No puede registrar otro desembolso para el mismo préstamo.
+					</div>
+				</div>
 				<div class="col-lg-12 d-none" id="contractRetanqueoAlert">
 					<div class="alert alert-info py-2 mb-0">
 						<div><strong>Monto solicitado:</strong> S/<span id="infoRequested">0.00</span></div>
@@ -434,7 +439,7 @@
   			</div>
   			<div class="modal-footer">
   			  <button type="button" class="btn me-auto" data-bs-dismiss="modal"><i class="ti ti-x icon"></i> Cerrar</button>
-  			  <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy icon"></i> Guardar</button>
+  			  <button type="submit" class="btn btn-primary" id="storeSubmitBtn"><i class="ti ti-device-floppy icon"></i> Guardar</button>
   			</div>
   		</form>
     </div>
@@ -549,11 +554,22 @@
 	function loadContractRetanqueoInfo(contractId){
 		if(!contractId){
 			$('#contractRetanqueoAlert').addClass('d-none');
+			$('#contractDisbursedAlert').addClass('d-none');
+			$('#storeSubmitBtn').prop('disabled', false);
 			return;
 		}
 		$.get('{{ url("expenses/contract-info") }}/' + contractId, { date: $('#date').val() || dailyDate }, function(res){
 			if(!res.status) return;
 			var d = res.data;
+			if(d.disbursed){
+				$('#infoDisbursedAmt').text(parseFloat(d.disbursed_amount || 0).toFixed(2));
+				$('#contractDisbursedAlert').removeClass('d-none');
+				$('#contractRetanqueoAlert').addClass('d-none');
+				$('#storeSubmitBtn').prop('disabled', true);
+				return;
+			}
+			$('#contractDisbursedAlert').addClass('d-none');
+			$('#storeSubmitBtn').prop('disabled', false);
 			$('#infoRequested').text(parseFloat(d.requested_amount).toFixed(2));
 			$('#infoBcp').text(parseFloat(d.bcp_retainage).toFixed(2));
 			$('#infoNet').text(parseFloat(d.net_amount).toFixed(2));
@@ -687,6 +703,8 @@
 		$('#payment_amount_2').val('');
 		$('#addPaymentBtn').prop('disabled', false);
 		$('#contractRetanqueoAlert').addClass('d-none');
+		$('#contractDisbursedAlert').addClass('d-none');
+		$('#storeSubmitBtn').prop('disabled', false);
 	});
 
 	$('#date').on('change', function(){
@@ -743,6 +761,12 @@
 	$('#storeForm').submit(function(e){
 		e.preventDefault();
 
+		var $submitBtn = $('#storeSubmitBtn');
+		if($submitBtn.prop('disabled')){
+			return;
+		}
+		$submitBtn.prop('disabled', true);
+
 		var fd = new FormData();
 
 		fd.append('description', $('#description').val());
@@ -774,10 +798,12 @@
 						.then(() => location.reload());
 
 				}else{
+					$submitBtn.prop('disabled', false);
 					ToastError.fire({ text: data.error ? data.error : 'Ocurrió un error' });
 				}
 			},
 			error: function(err){
+				$submitBtn.prop('disabled', false);
 				ToastError.fire({ text: 'Ocurrió un error' });
 			}
 		});
