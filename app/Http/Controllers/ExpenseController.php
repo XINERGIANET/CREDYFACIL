@@ -278,13 +278,18 @@ class ExpenseController extends Controller
         }
 
         $image = null;
+        $image2 = null;
 
-        if($request->hasFile('image')){
-            $image = $request->image->store('expenses', 'public');
+        if ($request->hasFile('image')) {
+            $image = $request->file('image')->store('expenses', 'public');
+        }
+
+        if ($request->hasFile('image_2')) {
+            $image2 = $request->file('image_2')->store('expenses', 'public');
         }
 
         try {
-            DB::transaction(function () use ($request, $image, &$expense) {
+            DB::transaction(function () use ($request, $image, $image2, &$expense) {
                 if ($request->contract_id) {
                     $exists = Expense::active()
                         ->where('contract_id', (int) $request->contract_id)
@@ -302,7 +307,8 @@ class ExpenseController extends Controller
                     'contract_id' => $request->contract_id,
                     'payment_method_id' => $request->payment_method_id,
                     'date' => $request->date,
-                    'image' => $image
+                    'image' => $image,
+                    'image_2' => $image2,
                 ]);
 
                 ExpensePayment::where('expenses_id', $expense->id)->delete();
@@ -354,7 +360,9 @@ class ExpenseController extends Controller
             'payment_amount' => $first ? $first->amount : null,
             'payment_method_id_2' => $second ? $second->payment_method_id : null,
             'payment_amount_2' => $second ? $second->amount : null,
-            'date' => $expense->date->format('Y-m-d')
+            'date' => $expense->date->format('Y-m-d'),
+            'has_image' => (bool) $expense->image,
+            'has_image_2' => (bool) $expense->image_2,
         ]);
     }
 
@@ -375,9 +383,14 @@ class ExpenseController extends Controller
         }
 
         $image = $expense->image;
+        $image2 = $expense->image_2;
 
-        if($request->hasFile('image')){
-            $image = $request->image->store('expenses', 'public');
+        if ($request->hasFile('image')) {
+            $image = $request->file('image')->store('expenses', 'public');
+        }
+
+        if ($request->hasFile('image_2')) {
+            $image2 = $request->file('image_2')->store('expenses', 'public');
         }
 
 
@@ -386,7 +399,8 @@ class ExpenseController extends Controller
             'seller_id' => $request->seller_id,
             'payment_method_id' => $request->payment_method_id,
             'date' => $request->date,
-            'image' => $image
+            'image' => $image,
+            'image_2' => $image2,
         ]);
 
         // sincronizar expenses_payments: eliminar y volver a crear según lo enviado (con montos)
@@ -431,7 +445,7 @@ class ExpenseController extends Controller
         return Excel::download(new ExpensesCashExport, $name);
     }
 
-    public function image(Expense $expense)
+    public function image(Expense $expense, $slot = 1)
     {
         $user = auth()->user();
 
@@ -439,11 +453,14 @@ class ExpenseController extends Controller
             abort(403);
         }
 
-        if (!$expense->image || !Storage::disk('public')->exists($expense->image)) {
+        $field = (int) $slot === 2 ? 'image_2' : 'image';
+        $pathValue = $expense->{$field};
+
+        if (!$pathValue || !Storage::disk('public')->exists($pathValue)) {
             abort(404);
         }
 
-        $path = Storage::disk('public')->path($expense->image);
+        $path = Storage::disk('public')->path($pathValue);
         $mime = mime_content_type($path) ?: 'application/octet-stream';
 
         return response()->file($path, [

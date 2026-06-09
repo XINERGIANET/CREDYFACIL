@@ -16,6 +16,7 @@ class Expense extends Model
         'payment_method_id',
         'date',
         'image',
+        'image_2',
         'deleted'
     ];
 

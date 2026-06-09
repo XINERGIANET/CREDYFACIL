@@ -102,7 +102,12 @@
 								<i class="ti ti-pencil icon"></i>
 							</button>
 							@if($expense->image)
-							<a class="btn btn-primary btn-icon" href="{{ route('expenses.image', $expense->id) }}" target="_blank">
+							<a class="btn btn-primary btn-icon" href="{{ route('expenses.image', ['expense' => $expense->id, 'slot' => 1]) }}" target="_blank" title="Foto 1">
+								<i class="ti ti-photo icon"></i>
+							</a>
+							@endif
+							@if($expense->image_2)
+							<a class="btn btn-primary btn-icon" href="{{ route('expenses.image', ['expense' => $expense->id, 'slot' => 2]) }}" target="_blank" title="Foto 2">
 								<i class="ti ti-photo icon"></i>
 							</a>
 							@endif
@@ -183,8 +188,14 @@
 				</div>
 				<div class="col-md-6">
 					<div class="mb-3">
-						<label class="form-label">Imagen</label>
+						<label class="form-label">Imagen 1</label>
 						<input type="file" class="form-control" name="image" id="image" accept=".jpg,.jpeg,.png,.webp">
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="mb-3">
+						<label class="form-label">Imagen 2</label>
+						<input type="file" class="form-control" name="image_2" id="image_2" accept=".jpg,.jpeg,.png,.webp">
 					</div>
 				</div>
 			  </div>
@@ -251,8 +262,20 @@
 				</div>
 				<div class="col-md-6">
 					<div class="mb-3">
-						<label class="form-label">Imagen</label>
+						<label class="form-label">Imagen 1</label>
+						<div id="editImage1Current" class="small mb-1 d-none">
+							<a href="#" target="_blank" id="editImage1Link">Ver imagen actual</a>
+						</div>
 						<input type="file" class="form-control" name="image" id="editImage" accept=".jpg,.jpeg,.png,.webp">
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="mb-3">
+						<label class="form-label">Imagen 2</label>
+						<div id="editImage2Current" class="small mb-1 d-none">
+							<a href="#" target="_blank" id="editImage2Link">Ver imagen actual</a>
+						</div>
+						<input type="file" class="form-control" name="image_2" id="editImage2" accept=".jpg,.jpeg,.png,.webp">
 					</div>
 				</div>
 			  </div>
@@ -308,7 +331,12 @@
 		fd.append('payment_method_id', $('#payment_method_id').val());
 		fd.append('payment_amount', $('#payment_amount').val());
 		fd.append('date', $('#date').val());
-		fd.append('image', $('#image')[0].files[0]);
+		if ($('#image')[0].files[0]) {
+			fd.append('image', $('#image')[0].files[0]);
+		}
+		if ($('#image_2')[0].files[0]) {
+			fd.append('image_2', $('#image_2')[0].files[0]);
+		}
 
 		// segundo método y monto
 		if (!$('#payment_method_block_2').hasClass('d-none')){
@@ -361,7 +389,21 @@
 					$('#edit_payment_method_block_2').addClass('d-none');
 					$('#editAddPaymentBtn').prop('disabled', false);
 				}
-				$('#editDate').val(data.date);				
+				$('#editDate').val(data.date);
+				if (data.has_image) {
+					$('#editImage1Current').removeClass('d-none');
+					$('#editImage1Link').attr('href', '{{ url("expenses") }}/' + data.id + '/image/1');
+				} else {
+					$('#editImage1Current').addClass('d-none');
+				}
+				if (data.has_image_2) {
+					$('#editImage2Current').removeClass('d-none');
+					$('#editImage2Link').attr('href', '{{ url("expenses") }}/' + data.id + '/image/2');
+				} else {
+					$('#editImage2Current').addClass('d-none');
+				}
+				$('#editImage').val('');
+				$('#editImage2').val('');
 				$('#editId').val(data.id);
 				$('#editModal').modal('show');
 			},
@@ -383,7 +425,12 @@
 		fd.append('payment_method_id', $('#editPaymentMethodId').val());
 		fd.append('payment_amount', $('#editPaymentAmount').val());
 		fd.append('date', $('#editDate').val());
-		fd.append('image', $('#editImage')[0].files[0]);
+		if ($('#editImage')[0].files[0]) {
+			fd.append('image', $('#editImage')[0].files[0]);
+		}
+		if ($('#editImage2')[0].files[0]) {
+			fd.append('image_2', $('#editImage2')[0].files[0]);
+		}
 		// segundo método en edición
 		if (!$('#edit_payment_method_block_2').hasClass('d-none')){
 			fd.append('payment_method_id_2', $('#editPaymentMethodId2').val());
