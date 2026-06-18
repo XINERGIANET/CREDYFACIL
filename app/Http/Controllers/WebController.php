@@ -935,23 +935,8 @@ class WebController extends Controller
 
     private function overdueQuotasDetail(string $title, $sellerId, Carbon $date, int $fromDays, ?int $toDays = null): array
     {
-        $quotas = Quota::active()
-            ->whereHas('contract', function ($query) use ($sellerId, $date) {
-                $query->where('approved', 1)
-                    ->when($sellerId, function ($q, $sellerId) {
-                        return $q->where('seller_id', $sellerId);
-                    })
-                    ->whereDate('date', '<=', $date);
-            })
-            ->where('paid', 0)
-            ->whereDate('date', '<', $date)
-            ->whereDate('date', '<=', $date->copy()->subDays($fromDays))
-            ->when($toDays, function ($query, $toDays) use ($date) {
-                return $query->whereDate('date', '>=', $date->copy()->subDays($toDays));
-            })
-            ->with('contract.seller')
-            ->orderBy('date')
-            ->get();
+        $metric = $this->resolveOverdueMetric($fromDays, $toDays);
+        $quotas = $this->overdueQuotasByMetric($sellerId, $date, $metric);
 
         return [
             'title' => $title,
@@ -1046,10 +1031,9 @@ class WebController extends Controller
 
     private function overdueRangeValue($sellerId, Carbon $date, int $fromDays, int $toDays): float
     {
-        $fromDate = $date->copy()->subDays($toDays);
-        $toDate = $date->copy()->subDays($fromDays);
+        $metric = $fromDays === 1 && $toDays === 7 ? 'mora_1_7' : 'mora_8_30';
 
-        return $this->quotaDebtRangeValue($sellerId, $date, $fromDate, $toDate);
+        return (float) $this->overdueQuotasByMetric($sellerId, $date, $metric)->sum('debt');
     }
 
     private function quotaDebtRangeValue($sellerId, Carbon $date, Carbon $fromDate, Carbon $toDate): float
@@ -1097,6 +1081,81 @@ class WebController extends Controller
         $parts = preg_split('/\s+/', trim($name));
 
         return strtoupper($parts[0] ?? $name);
+    }
+
+    private function resolveOverdueMetric(int $fromDays, ?int $toDays = null): string
+    {
+        if ($fromDays === 1 && $toDays === 7) {
+            return 'mora_1_7';
+        }
+
+        if ($fromDays === 8 && $toDays === 30) {
+            return 'mora_8_30';
+        }
+
+        if ($fromDays === 8 && $toDays === null) {
+            return 'mora_gt_7';
+        }
+
+        if ($fromDays === 61 && $toDays === null) {
+            return 'mora_gt_60';
+        }
+
+        return 'mora_total';
+    }
+
+    private function overdueQuotasByMetric($sellerId, Carbon $date, string $metric)
+    {
+        $quotas = $this->baseOverdueQuotasQuery($sellerId, $date)
+            ->with('contract.seller')
+            ->orderBy('date')
+            ->get()
+            ->map(function ($quota) use ($date) {
+                $quota->days_overdue = optional($quota->date)->diffInDays($date);
+                return $quota;
+            });
+
+        $clientMaxDays = $quotas
+            ->groupBy(function ($quota) {
+                return app(ClientPortfolioService::class)->clientKey($quota->contract);
+            })
+            ->map(function ($group) {
+                return (int) $group->max('days_overdue');
+            });
+
+        return $quotas->filter(function ($quota) use ($metric, $clientMaxDays) {
+            $clientKey = app(ClientPortfolioService::class)->clientKey($quota->contract);
+            $maxDays = (int) $clientMaxDays->get($clientKey, 0);
+            $days = (int) $quota->days_overdue;
+
+            switch ($metric) {
+                case 'mora_1_7':
+                    return $maxDays >= 1 && $maxDays <= 7 && $days >= 1 && $days <= 7;
+                case 'mora_8_30':
+                    return $maxDays >= 8 && $maxDays <= 30 && $days >= 8 && $days <= 30;
+                case 'mora_gt_7':
+                    return $maxDays > 7 && $days > 7;
+                case 'mora_gt_60':
+                    return $maxDays > 60 && $days > 60;
+                case 'mora_total':
+                default:
+                    return $maxDays >= 1 && $days >= 1;
+            }
+        })->values();
+    }
+
+    private function baseOverdueQuotasQuery($sellerId, Carbon $date)
+    {
+        return Quota::active()
+            ->whereHas('contract', function ($query) use ($sellerId, $date) {
+                $query->where('approved', 1)
+                    ->when($sellerId, function ($q, $sellerId) {
+                        return $q->where('seller_id', $sellerId);
+                    })
+                    ->whereDate('date', '<=', $date);
+            })
+            ->where('paid', 0)
+            ->whereDate('date', '<', $date);
     }
 
     private function quotaDebtValue($sellerId, Carbon $date, ?int $overdueDays = null): float
