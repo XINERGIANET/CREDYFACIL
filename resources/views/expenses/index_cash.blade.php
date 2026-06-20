@@ -138,6 +138,7 @@
   <div class="modal-dialog modal-dialog-centered" role="document">
   	<div class="modal-content">
   		<form id="storeForm" method="POST" enctype="multipart/form-data">
+  			<input type="hidden" name="request_uid" id="request_uid">
   			<div class="modal-header">
   			  <h5 class="modal-title">Crear nuevo</h5>
   			  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -202,7 +203,7 @@
   			</div>
   			<div class="modal-footer">
   			  <button type="button" class="btn me-auto" data-bs-dismiss="modal"><i class="ti ti-x icon"></i> Cerrar</button>
-  			  <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy icon"></i> Guardar</button>
+  			  <button type="submit" class="btn btn-primary" id="storeSubmitBtn"><i class="ti ti-device-floppy icon"></i> Guardar</button>
   			</div>
   		</form>
     </div>
@@ -294,6 +295,14 @@
 @section('scripts')
 <script>
 
+	function generateExpenseRequestUid(){
+		if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+			return window.crypto.randomUUID();
+		}
+
+		return 'expense-' + Date.now() + '-' + Math.random().toString(36).slice(2, 12);
+	}
+
 	// Mostrar segundo método en creación
 	$('#addPaymentBtn').on('click', function(){
 		$('#payment_method_block_2').removeClass('d-none');
@@ -312,6 +321,8 @@
 		$('#payment_method_id_2').val('');
 		$('#payment_amount_2').val('');
 		$('#addPaymentBtn').prop('disabled', false);
+		$('#storeSubmitBtn').prop('disabled', false);
+		$('#request_uid').val(generateExpenseRequestUid());
 	});
 
 	// Al cerrar modal de edición, resetear segundo select
@@ -325,12 +336,19 @@
 	$('#storeForm').submit(function(e){
 		e.preventDefault();
 
+		var $submitBtn = $('#storeSubmitBtn');
+		if($submitBtn.prop('disabled')){
+			return;
+		}
+		$submitBtn.prop('disabled', true);
+
 		var fd = new FormData();
 
 		fd.append('description', $('#description').val());
 		fd.append('payment_method_id', $('#payment_method_id').val());
 		fd.append('payment_amount', $('#payment_amount').val());
 		fd.append('date', $('#date').val());
+		fd.append('request_uid', $('#request_uid').val());
 		if ($('#image')[0].files[0]) {
 			fd.append('image', $('#image')[0].files[0]);
 		}
@@ -354,15 +372,18 @@
 				if(data.status){
 					$('#createModal').modal('hide');
 					$('#storeForm')[0].reset();
+					$('#request_uid').val('');
 					
 					ToastMessage.fire({ text: 'Registro guardado' })
 						.then(() => location.reload());
 
 				}else{
+					$submitBtn.prop('disabled', false);
 					ToastError.fire({ text: data.error ? data.error : 'Ocurrió un error' });
 				}
 			},
 			error: function(err){
+				$submitBtn.prop('disabled', false);
 				ToastError.fire({ text: 'Ocurrió un error' });
 			}
 		});

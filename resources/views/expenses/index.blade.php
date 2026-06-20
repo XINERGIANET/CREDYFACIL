@@ -350,6 +350,7 @@
   <div class="modal-dialog modal-dialog-centered" role="document">
   	<div class="modal-content">
   		<form id="storeForm" method="POST" enctype="multipart/form-data">
+  			<input type="hidden" name="request_uid" id="request_uid">
   			<div class="modal-header">
   			  <h5 class="modal-title">Crear nuevo</h5>
   			  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -582,6 +583,14 @@
 	var tsContracts;
 	var contractLockedFlag = false;
 
+	function generateExpenseRequestUid(){
+		if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+			return window.crypto.randomUUID();
+		}
+
+		return 'expense-' + Date.now() + '-' + Math.random().toString(36).slice(2, 12);
+	}
+
 	function getSelectedContractId(){
 		return $('#contract_id_hidden').val() || (tsContracts ? tsContracts.getValue() : '');
 	}
@@ -768,6 +777,7 @@
 	$('#createModal').on('hidden.bs.modal', function(){
 		contractLockedFlag = false;
 		unlockContractSelection();
+		$('#request_uid').val('');
 	});
 
 	$('#createModal').on('show.bs.modal', function(){
@@ -781,6 +791,7 @@
 		$('#contractRetanqueoAlert').addClass('d-none');
 		$('#contractDisbursedAlert').addClass('d-none');
 		$('#storeSubmitBtn').prop('disabled', false);
+		$('#request_uid').val(generateExpenseRequestUid());
 	});
 
 	$('#date').on('change', function(){
@@ -848,9 +859,10 @@
 		fd.append('description', $('#description').val());
 		fd.append('seller_id', $('#seller_id').val());
 		fd.append('contract_id', getSelectedContractId());
-	fd.append('payment_method_id', $('#payment_method_id').val());
+		fd.append('payment_method_id', $('#payment_method_id').val());
 		fd.append('payment_amount', $('#payment_amount').val());
 		fd.append('date', $('#date').val());
+		fd.append('request_uid', $('#request_uid').val());
 		if ($('#image')[0].files[0]) {
 			fd.append('image', $('#image')[0].files[0]);
 		}

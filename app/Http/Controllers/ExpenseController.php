@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Exports\ExpensesExport;
@@ -260,13 +261,21 @@ class ExpenseController extends Controller
             'description' => 'required',
             'payment_method_id' => 'required',
             'payment_amount' => 'required|numeric',
-            'date' => 'required|date'
+            'date' => 'required|date',
+            'request_uid' => 'required|string|max:64'
         ]);
 
         if($validator->fails()){
             return response()->json([
                 'status' => false,
                 'error' => $validator->errors()->first()
+            ]);
+        }
+
+        if (Expense::where('request_uid', $request->request_uid)->exists()) {
+            return response()->json([
+                'status' => true,
+                'duplicate_ignored' => true,
             ]);
         }
 
@@ -305,6 +314,7 @@ class ExpenseController extends Controller
                     'description' => $request->description,
                     'seller_id' => $request->seller_id,
                     'contract_id' => $request->contract_id,
+                    'request_uid' => $request->request_uid,
                     'payment_method_id' => $request->payment_method_id,
                     'date' => $request->date,
                     'image' => $image,
@@ -334,6 +344,15 @@ class ExpenseController extends Controller
                 return response()->json([
                     'status' => false,
                     'error' => 'Ya existe un desembolso registrado para este préstamo. Edite o elimine el registro existente.',
+                ]);
+            }
+
+            throw $e;
+        } catch (QueryException $e) {
+            if ((string) $e->getCode() === '23000' && str_contains($e->getMessage(), 'request_uid')) {
+                return response()->json([
+                    'status' => true,
+                    'duplicate_ignored' => true,
                 ]);
             }
 

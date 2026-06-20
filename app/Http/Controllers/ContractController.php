@@ -639,7 +639,7 @@ class ContractController extends Controller
         $options->set('chroot', base_path());
 
         // Cargar relaciones de ubicación y cuotas
-        $contract->load('district.province.department', 'quotas');
+        $contract->load('district.province.department', 'quotas', 'expenses.expensePayments.paymentMethod');
 
         //Cantidad de soles en letras
         $contract->amount_in_words = $this->convertToWords($contract->requested_amount);
@@ -674,6 +674,52 @@ class ContractController extends Controller
             $contract->total_days = $startDate->diffInDays($endDate);
         } else {
             $contract->total_days = 0;
+        }
+
+        $contract->loan_sheet_quota_type = strtoupper((string) $contract->quota_type);
+
+        $portfolioType = app(\App\Services\ClientPortfolioService::class)->portfolioClientType($contract);
+        if ((int) $contract->paid === 1) {
+            $contract->loan_sheet_credit_type = 'CANCELADO';
+        } elseif ($portfolioType === 'Inactivo') {
+            $contract->loan_sheet_credit_type = 'INACTIVO';
+        } elseif ($portfolioType === 'Recurrente Activo') {
+            $contract->loan_sheet_credit_type = 'RETANQUEO';
+        } else {
+            $contract->loan_sheet_credit_type = 'NUEVO';
+        }
+
+        $contract->loan_sheet_payment_flags = [
+            'EFECTIVO' => false,
+            'YAPE' => false,
+            'CUENTA' => false,
+            'PLIN' => false,
+        ];
+
+        $latestExpense = $contract->expenses->sortByDesc('id')->first();
+        if ($latestExpense) {
+            foreach ($latestExpense->expensePayments as $expensePayment) {
+                $methodName = strtoupper((string) optional($expensePayment->paymentMethod)->name);
+
+                if (str_contains($methodName, 'EFECTIVO')) {
+                    $contract->loan_sheet_payment_flags['EFECTIVO'] = true;
+                }
+                if (str_contains($methodName, 'YAPE')) {
+                    $contract->loan_sheet_payment_flags['YAPE'] = true;
+                }
+                if (str_contains($methodName, 'PLIN')) {
+                    $contract->loan_sheet_payment_flags['PLIN'] = true;
+                }
+                if (
+                    str_contains($methodName, 'BCP') ||
+                    str_contains($methodName, 'CUENTA') ||
+                    str_contains($methodName, 'TRANSFER') ||
+                    str_contains($methodName, 'DEPOSITO') ||
+                    str_contains($methodName, 'BANCO')
+                ) {
+                    $contract->loan_sheet_payment_flags['CUENTA'] = true;
+                }
+            }
         }
         // Crear instancia de DomPDF
         $dompdf = new Dompdf($options);
