@@ -689,7 +689,7 @@ class ContractController extends Controller
             $contract->loan_sheet_credit_type = 'NUEVO';
         }
 
-        $contract->loan_sheet_payment_flags = [
+        $loanSheetPaymentFlags = [
             'EFECTIVO' => false,
             'YAPE' => false,
             'CUENTA' => false,
@@ -702,13 +702,13 @@ class ContractController extends Controller
                 $methodName = strtoupper((string) optional($expensePayment->paymentMethod)->name);
 
                 if (str_contains($methodName, 'EFECTIVO')) {
-                    $contract->loan_sheet_payment_flags['EFECTIVO'] = true;
+                    $loanSheetPaymentFlags['EFECTIVO'] = true;
                 }
                 if (str_contains($methodName, 'YAPE')) {
-                    $contract->loan_sheet_payment_flags['YAPE'] = true;
+                    $loanSheetPaymentFlags['YAPE'] = true;
                 }
                 if (str_contains($methodName, 'PLIN')) {
-                    $contract->loan_sheet_payment_flags['PLIN'] = true;
+                    $loanSheetPaymentFlags['PLIN'] = true;
                 }
                 if (
                     str_contains($methodName, 'BCP') ||
@@ -717,10 +717,12 @@ class ContractController extends Controller
                     str_contains($methodName, 'DEPOSITO') ||
                     str_contains($methodName, 'BANCO')
                 ) {
-                    $contract->loan_sheet_payment_flags['CUENTA'] = true;
+                    $loanSheetPaymentFlags['CUENTA'] = true;
                 }
             }
         }
+
+        $contract->loan_sheet_payment_flags = $loanSheetPaymentFlags;
         // Crear instancia de DomPDF
         $dompdf = new Dompdf($options);
 
