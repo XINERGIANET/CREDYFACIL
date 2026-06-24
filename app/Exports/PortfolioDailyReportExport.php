@@ -194,7 +194,7 @@ class PortfolioDailyReportExport implements FromArray, ShouldAutoSize, WithEvent
                 ->where('approved', 1)
                 ->where('seller_id', $sellerId)
                 ->whereDate('date', '<=', $date);
-        });
+        })->where('paid', 0);
 
         if ($quotaFilter) {
             $quotaFilter($quotaQuery);
