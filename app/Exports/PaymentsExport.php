@@ -55,7 +55,12 @@ class PaymentsExport implements FromCollection, WithHeadings, WithMapping, WithS
 
     public function map($payment): array
     {
+        $breakdown = $payment->capitalInterestInsuranceBreakdown();
+
         return array_merge(StandardExcelFormat::fromPayment($payment), [
+            round($breakdown['capital'], 2),
+            round($breakdown['interest'], 2),
+            round($breakdown['insurance'], 2),
             optional($payment->payment_method)->name ?? '',
         ]);
     }
@@ -63,6 +68,9 @@ class PaymentsExport implements FromCollection, WithHeadings, WithMapping, WithS
     public function headings(): array
     {
         return array_merge(StandardExcelFormat::headings(), [
+            'Capital',
+            'Interés',
+            'Seguro',
             'Metodo de pago',
         ]);
     }
