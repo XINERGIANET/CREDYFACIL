@@ -28,7 +28,7 @@
                     <div href="." class="d-flex align-items-center">
                         <div class="icon-30 me-2" style="width: 30px; height: 30px;">
                             <img src="{{ asset('assets/images/xinergia-icon.svg') }}" alt="">
-						</div>
+                        </div>
                         <span>CREDYFACIL</span>
                     </div>
                 </h3>
@@ -46,11 +46,13 @@
                             </div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                            <a href="{{ route('settings.index') }}" class="dropdown-item">Ajustes</a>
+                            @if (!auth()->user()->hasRole('payments'))
+                                <a href="{{ route('settings.index') }}" class="dropdown-item">Ajustes</a>
+                            @endif
                             <form method="POST" action="{{ route('auth.logout') }}">
                                 @csrf
                                 <a href="javascript:void(0)" class="dropdown-item"
-                                    onclick="this.closest('form').submit()">Cerrar sesión</a>
+                                    onclick="this.closest('form').submit()">Cerrar sesion</a>
                             </form>
                         </div>
                     </div>
@@ -58,7 +60,7 @@
                 <div class="collapse navbar-collapse" id="sidebar-menu">
                     <ul class="navbar-nav pt-lg-3">
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url('/') }}">
+                            <a class="nav-link" href="{{ auth()->user()->hasRole('payments') ? route('payments.index') : url('/') }}">
                                 <span class="nav-link-icon d-md-none d-lg-inline-block">
                                     <i class="ti ti-home icon"></i>
                                 </span>
@@ -79,47 +81,47 @@
                                 </a>
                             </li>
                         @endif
-                        @if (!auth()->user()->hasRole( 'payments'))
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('clients.index') }}">
-                                <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                    <i class="ti ti-users icon"></i>
-                                </span>
-                                <span class="nav-link-title">
-                                    Clientes
-                                </span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('clients.inactive') }}">
-                                <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                    <i class="ti ti-user-off icon"></i>
-                                </span>
-                                <span class="nav-link-title">
-                                    Clientes inactivos
-                                </span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('contracts.index') }}">
-                                <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                    <i class="ti ti-file-text icon"></i>
-                                </span>
-                                <span class="nav-link-title">
-                                    Contratos
-                                </span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('contracts.ending') }}">
-                                <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                    <i class="ti ti-file-text icon"></i>
-                                </span>
-                                <span class="nav-link-title">
-                                    Contratos por finalizar
-                                </span>
-                            </a>
-                        </li>
+                        @if (!auth()->user()->hasRole('payments'))
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('clients.index') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-users icon"></i>
+                                    </span>
+                                    <span class="nav-link-title">
+                                        Clientes
+                                    </span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('clients.inactive') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-user-off icon"></i>
+                                    </span>
+                                    <span class="nav-link-title">
+                                        Clientes inactivos
+                                    </span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('contracts.index') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-file-text icon"></i>
+                                    </span>
+                                    <span class="nav-link-title">
+                                        Contratos
+                                    </span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('contracts.ending') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-file-text icon"></i>
+                                    </span>
+                                    <span class="nav-link-title">
+                                        Contratos por finalizar
+                                    </span>
+                                </a>
+                            </li>
                         @endif
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown"
@@ -133,16 +135,18 @@
                             </a>
                             <div class="dropdown-menu">
                                 <div class="dropdown-menu-columns">
-                                    <div class="dropdown-menu-column">
-                                        <a class="dropdown-item" href="{{ route('payments.charges') }}">
-                                            Gestión de cobranza
-                                        </a>
-                                    </div>
-                                    <div class="dropdown-menu-column">
-                                        <a class="dropdown-item" href="{{ route('payments.dues') }}">
-                                            Gestión de mora
-                                        </a>
-                                    </div>
+                                    @if (!auth()->user()->hasRole('payments'))
+                                        <div class="dropdown-menu-column">
+                                            <a class="dropdown-item" href="{{ route('payments.charges') }}">
+                                                Gestion de cobranza
+                                            </a>
+                                        </div>
+                                        <div class="dropdown-menu-column">
+                                            <a class="dropdown-item" href="{{ route('payments.dues') }}">
+                                                Gestion de mora
+                                            </a>
+                                        </div>
+                                    @endif
                                     <div class="dropdown-menu-column">
                                         <a class="dropdown-item" href="{{ route('payments.index') }}">
                                             Pagos
@@ -185,7 +189,7 @@
                                                 @if (auth()->user()->hasRole('admin'))
                                                     <div class="dropdown-menu-column">
                                                         <a class="dropdown-item" href="{{ route('expenses.index_cash') }}">
-                                                            Administrativos 
+                                                            Administrativos
                                                         </a>
                                                     </div>
                                                 @endif
@@ -194,38 +198,38 @@
                                     </li>
                                 @endif
                             @endif
-                        @if (auth()->user()->hasRole('admin'))
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('account-movements.index') }}">
-                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                        <i class="ti ti-wallet icon"></i>
-                                    </span>
-                                    <span class="nav-link-title">
-                                        Caja y cuentas
-                                    </span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('transfers.index') }}">
-                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                        <i class="ti ti-truck icon"></i>
-                                    </span>
-                                    <span class="nav-link-title">
-                                        Traslados
-                                    </span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('goals.index') }}">
-                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                        <i class="ti ti-target icon"></i>
-                                    </span>
-                                    <span class="nav-link-title">
-                                        Metas
-                                    </span>
-                                </a>
-                            </li>
-                        @endif
+                            @if (auth()->user()->hasRole('admin'))
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('account-movements.index') }}">
+                                        <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                            <i class="ti ti-wallet icon"></i>
+                                        </span>
+                                        <span class="nav-link-title">
+                                            Caja y cuentas
+                                        </span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('transfers.index') }}">
+                                        <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                            <i class="ti ti-truck icon"></i>
+                                        </span>
+                                        <span class="nav-link-title">
+                                            Traslados
+                                        </span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('goals.index') }}">
+                                        <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                            <i class="ti ti-target icon"></i>
+                                        </span>
+                                        <span class="nav-link-title">
+                                            Metas
+                                        </span>
+                                    </a>
+                                </li>
+                            @endif
                         @endif
                     </ul>
                 </div>
@@ -262,11 +266,13 @@
                             </div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                            <a href="{{ route('settings.index') }}" class="dropdown-item">Ajustes</a>
+                            @if (!auth()->user()->hasRole('payments'))
+                                <a href="{{ route('settings.index') }}" class="dropdown-item">Ajustes</a>
+                            @endif
                             <form method="POST" action="{{ route('auth.logout') }}">
                                 @csrf
                                 <a href="javascript:void(0)" class="dropdown-item"
-                                    onclick="this.closest('form').submit()">Cerrar sesión</a>
+                                    onclick="this.closest('form').submit()">Cerrar sesion</a>
                             </form>
                         </div>
                     </div>

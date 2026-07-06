@@ -28,7 +28,7 @@ Route::post('login', [AuthController::class, 'check'])->name('auth.check');
 Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
 
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'restrict.payments'])->group(function () {
 
 	Route::get('/', [WebController::class, 'index']);
 	Route::get('reports/portfolio-daily/excel', [WebController::class, 'portfolioDailyExcel'])->name('reports.portfolio-daily.excel');
