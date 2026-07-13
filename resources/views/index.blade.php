@@ -374,6 +374,12 @@
     };
 @endphp
 <div class="card mb-4 shadow-sm">
+    <div class="card-header d-flex justify-content-end align-items-center">
+        <a class="btn btn-sm btn-success btn-report-excel" href="{{ route('reports.portfolio-overdue.excel', ['date' => $overdueDate->format('Y-m-d')]) }}" target="_blank">
+            <i class="ti ti-file-spreadsheet"></i>
+            <span>Excel</span>
+        </a>
+    </div>
     <div class="table-responsive">
         <table class="table table-bordered table-portfolio table-overdue mb-0">
             <thead>

@@ -20,6 +20,7 @@ use App\Models\AccountMovement;
 use App\Models\PaymentMethod;
 use App\Exports\PortfolioDailyReportExport;
 use App\Exports\PortfolioDailyClientsExport;
+use App\Exports\PortfolioOverdueReportExport;
 use App\Services\ClientPortfolioService;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -56,6 +57,14 @@ class WebController extends Controller
             new PortfolioDailyClientsExport($contracts, $date->format('Y-m-d')),
             $name
         );
+    }
+
+    public function portfolioOverdueExcel(Request $request)
+    {
+        $date = $request->date ? Carbon::parse($request->date) : today();
+        $name = 'Reporte_Cartera_Morosa_Credyfacil_' . $date->format('d_m_Y') . '.xlsx';
+
+        return Excel::download(new PortfolioOverdueReportExport($date->format('Y-m-d')), $name);
     }
 
     public function index(Request $request){
