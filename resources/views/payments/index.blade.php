@@ -35,7 +35,7 @@
         <div class="card-body border-bottom">
             <form>
                 <div class="row">
-                    @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit') || auth()->user()->hasRole('payments'))
                         <div class="col-md-3">
                             <div class="mb-3">
                                 <label class="form-label">Cliente</label>
