@@ -34,7 +34,9 @@ class StandardExcelFormat
     {
         $service = app(ClientPortfolioService::class);
         $origin = $service->originSeller($contract);
-        $display = $service->currentActiveContract($contract) ?: $contract;
+        $display = (!empty($options['use_current_active']))
+            ? ($service->currentActiveContract($contract) ?: $contract)
+            : $contract;
 
         $daysOverdue = array_key_exists('days_overdue', $options)
             ? (int) $options['days_overdue']
