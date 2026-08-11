@@ -203,11 +203,8 @@ class ClientPortfolioService
             ->when($user->hasRole('seller'), function ($query) use ($user) {
                 return $query->where('seller_id', $user->id);
             })
-            ->when($request->name, function ($query, $name) {
-                return $query->where(function ($query) use ($name) {
-                    $query->where('name', 'like', '%' . $name . '%')
-                        ->orWhere('group_name', 'like', '%' . $name . '%');
-                });
+            ->when($request->name ?? $request->search, function ($query, $name) {
+                return $query->searchClient($name);
             })
             ->when($request->seller_id, function ($query, $sellerId) {
                 return $query->where('seller_id', $sellerId);

@@ -192,12 +192,8 @@ class ClientController extends Controller
             ->when($user->hasRole('seller'), function ($query) use ($user) {
                 return $query->where('contracts.seller_id', $user->id);
             })
-            ->when($request->name, function ($query, $name) {
-                return $query->where(function ($query) use ($name) {
-                    return $query->where('contracts.name', 'like', '%' . $name . '%')
-                        ->orWhere('contracts.group_name', 'like', '%' . $name . '%')
-                        ->orWhere('contracts.document', 'like', '%' . $name . '%');
-                });
+            ->when($request->name ?? $request->search, function ($query, $name) {
+                return $query->searchClient($name, 'contracts');
             })
             ->when($request->client_type, function ($query, $client_type) {
                 return $query->where('contracts.client_type', $client_type);

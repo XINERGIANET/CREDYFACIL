@@ -27,8 +27,8 @@
 			<div class="row">
 				<div class="col-md-3">
 					<div class="mb-3">
-						<label class="form-label">Cliente, grupo o DNI</label>
-						<input type="text" class="form-control" name="name" value="{{ request()->name }}">
+						<label class="form-label">Cliente, apellido o DNI</label>
+						<input type="text" class="form-control" name="name" value="{{ request()->name ?? request()->search }}" placeholder="Buscar por nombre, apellido, grupo o DNI...">
 					</div>
 				</div>
 				<div class="col-md-3">
