@@ -31,8 +31,8 @@
                 <div class="row">
                     <div class="col-md-3">
                         <div class="mb-3">
-                            <label class="form-label">Cliente</label>
-                            <input type="text" class="form-control" name="name" value="{{ request()->name }}">
+                            <label class="form-label">Cliente, apellido o DNI</label>
+                            <input type="text" class="form-control" name="name" value="{{ request()->name ?? request()->search }}" placeholder="Buscar por nombre, apellido, grupo o DNI...">
                         </div>
                     </div>
                     @if (!auth()->user()->hasRole('seller'))
@@ -63,7 +63,9 @@
                         </div>
                     </div>
                 </div>
-                <button class="btn btn-primary">Filtrar</button>
+                <button class="btn btn-primary">
+                    <i class="ti ti-search icon"></i> Buscar
+                </button>
                 <a href="{{ route('contracts.index') }}" class="btn btn-danger">Limpiar</a>
             </form>
         </div>

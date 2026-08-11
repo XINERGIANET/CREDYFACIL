@@ -23,6 +23,7 @@ class StandardExcelFormat
             'Monto Total',
             'Fecha de Desembolso',
             'Monto de Cuota',
+            'Tipo de Cuota',
             'N° de Cuotas',
             'Cuotas Canceladas',
             'Dias de Mora',
@@ -73,6 +74,7 @@ class StandardExcelFormat
             round((float) $display->payable_amount, 2),
             $fechaDesembolso,
             $montoCuota,
+            $display->quota_type,
             (int) $display->quotas_number,
             $cuotasCanceladas,
             $daysOverdue,
@@ -85,7 +87,7 @@ class StandardExcelFormat
         $contract = self::resolveContract($row->contract ?? null);
 
         if (!$contract) {
-            return array_fill(0, 14, '');
+            return array_fill(0, 15, '');
         }
 
         return self::fromContract($contract, [
@@ -100,7 +102,7 @@ class StandardExcelFormat
         $contract = $payment->quota ? self::resolveContract($payment->quota->contract) : null;
 
         if (!$contract) {
-            return array_fill(0, 14, '');
+            return array_fill(0, 15, '');
         }
 
         return self::fromContract($contract, [
@@ -118,7 +120,7 @@ class StandardExcelFormat
         $contract = self::resolveContract($quota->contract);
 
         if (!$contract) {
-            return array_fill(0, 14, '');
+            return array_fill(0, 15, '');
         }
 
         $days = $quota->date ? (int) Carbon::parse($quota->date)->diffInDays(now()->startOfDay()) : 0;
@@ -150,6 +152,7 @@ class StandardExcelFormat
             '',
             '',
             $expense->date ? $expense->date->format('d/m/Y') : '',
+            '',
             '',
             '',
             '',
