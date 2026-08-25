@@ -19,6 +19,9 @@ use App\Models\Goal;
 use App\Models\AccountMovement;
 use App\Models\PaymentMethod;
 use App\Exports\PortfolioDailyReportExport;
+use App\Exports\PortfolioDailyClientsExport;
+use App\Exports\PortfolioOverdueReportExport;
+use App\Services\ClientPortfolioService;
 use Maatwebsite\Excel\Facades\Excel;
 
 class WebController extends Controller
@@ -39,6 +42,29 @@ class WebController extends Controller
         $name = 'Reporte_Cartera_Credyfacil_' . $date->format('d_m_Y') . '.xlsx';
 
         return Excel::download(new PortfolioDailyReportExport($date->format('Y-m-d')), $name);
+    }
+
+    public function portfolioDailyClientsExcel(Request $request, ClientPortfolioService $portfolioService)
+    {
+        $sellerId = $request->seller_id ?: null;
+        $date = $request->date ? Carbon::parse($request->date) : today();
+        $metric = $request->metric ?: 'current_clients';
+        $contracts = $this->contractsForPortfolioMetric($metric, $sellerId, $date, $portfolioService);
+        $sellerLabel = $sellerId ? optional(User::find($sellerId))->name : 'Todos';
+        $name = 'Clientes_Cartera_' . preg_replace('/[^A-Za-z0-9_]/', '_', $sellerLabel) . '_' . $date->format('d_m_Y') . '.xlsx';
+
+        return Excel::download(
+            new PortfolioDailyClientsExport($contracts, $date->format('Y-m-d')),
+            $name
+        );
+    }
+
+    public function portfolioOverdueExcel(Request $request)
+    {
+        $date = $request->date ? Carbon::parse($request->date) : today();
+        $name = 'Reporte_Cartera_Morosa_Credyfacil_' . $date->format('d_m_Y') . '.xlsx';
+
+        return Excel::download(new PortfolioOverdueReportExport($date->format('Y-m-d')), $name);
     }
 
     public function index(Request $request){
@@ -556,18 +582,21 @@ class WebController extends Controller
     }
 
     public function apiReniec(Request $request){
-        $response = Http::get('https://api.perudevs.com/api/v1/dni/simple', [
-            'document' => $request->dni,
-            'key' => env('APIRENIEC_KEY'),
-        ]);
+        $response = Http::withToken((string) config('apireniec.key'))
+            ->timeout(15)
+            ->post((string) config('apireniec.url'), [
+                'dni' => $request->dni,
+            ]);
 
-        $data = $response->json();
+        $data = (array) $response->json();
+        $estado = (bool) ($data['success'] ?? false);
+        $resultado = (array) ($data['data'] ?? []);
 
-        if($response->successful() && isset($data['estado']) && $data['estado'] === true && !empty($data['resultado']['nombre_completo'])){
+        if($response->successful() && $estado === true && !empty($resultado['nombre_completo'])){
 
             return response()->json([
                 'status' => true,
-                'name' => $data['resultado']['nombre_completo']
+                'name' => $resultado['nombre_completo']
             ]);
 
         }else{
@@ -743,58 +772,36 @@ class WebController extends Controller
 
     private function activeContractsAsOf($sellerId, Carbon $date)
     {
-        return Contract::active()
-            ->where('approved', 1)
-            ->when($sellerId, function ($query, $sellerId) {
-                return $query->where('seller_id', $sellerId);
-            })
-            ->whereDate('date', '<=', $date)
-            ->where(function ($query) use ($date) {
-                $query->whereHas('quotas', function ($q) {
-                    $q->where('debt', '>', 0);
-                })->orWhereHas('quotas.payments', function ($q) use ($date) {
-                    $q->active()->whereDate('date', '>', $date);
-                });
-            })
-            ->with('seller')
-            ->get()
-            ->unique(function ($contract) {
-                return ($contract->document ?: '') . '|' . ($contract->group_name ?: '');
-            })
-            ->values();
+        return app(ClientPortfolioService::class)->activeContractsAsOf($sellerId, $date);
     }
 
     private function newClientContracts($sellerId, Carbon $start, Carbon $end)
     {
-        return Contract::active()
-            ->where('approved', 1)
-            ->when($sellerId, function ($query, $sellerId) {
-                return $query->where('seller_id', $sellerId);
-            })
-            ->whereDate('date', '>=', $start)
-            ->whereDate('date', '<=', $end)
-            ->whereNotExists(function ($query) use ($start) {
-                $query->select(DB::raw(1))
-                    ->from('contracts as c2')
-                    ->where('c2.deleted', 0)
-                    ->where('c2.approved', 1)
-                    ->whereDate('c2.date', '<', $start)
-                    ->where(function ($q) {
-                        $q->where(function ($sq) {
-                            $sq->whereNotNull('contracts.document')
-                                ->whereColumn('c2.document', 'contracts.document');
-                        })->orWhere(function ($sq) {
-                            $sq->whereNotNull('contracts.group_name')
-                                ->whereColumn('c2.group_name', 'contracts.group_name');
-                        });
-                    });
-            })
-            ->with('seller')
-            ->get()
-            ->unique(function ($contract) {
-                return ($contract->document ?: '') . '|' . ($contract->group_name ?: '');
-            })
-            ->values();
+        return app(ClientPortfolioService::class)->newClientContracts($sellerId, $start, $end);
+    }
+
+    private function contractsForPortfolioMetric(string $metric, $sellerId, Carbon $date, ClientPortfolioService $service)
+    {
+        $monthStart = $date->copy()->startOfMonth();
+        $initialDate = $monthStart->copy()->subDay();
+        $previousStart = $date->copy()->subMonthNoOverflow()->startOfMonth();
+        $previousEnd = $date->copy()->subMonthNoOverflow()->endOfMonth();
+
+        switch ($metric) {
+            case 'initial_clients':
+                return $service->activeContractsAsOf($sellerId, $initialDate);
+            case 'new_clients':
+                return $service->newClientContracts($sellerId, $monthStart, $date);
+            case 'previous_disbursement':
+            case 'previous_operations':
+                return $this->contractsBetween($sellerId, $previousStart, $previousEnd);
+            case 'current_disbursement':
+            case 'current_operations':
+                return $this->contractsBetween($sellerId, $monthStart, $date);
+            case 'current_clients':
+            default:
+                return $service->activeContractsAsOf($sellerId, $date);
+        }
     }
 
     private function contractsBetween($sellerId, Carbon $start, Carbon $end)
@@ -851,15 +858,7 @@ class WebController extends Controller
 
     private function contractDebtAsOf($contractId, Carbon $date): float
     {
-        $currentDebt = (float) Quota::where('contract_id', $contractId)->sum('debt');
-        $futurePayments = (float) Payment::active()
-            ->whereDate('payments.date', '>', $date)
-            ->whereHas('quota', function ($query) use ($contractId) {
-                return $query->where('contract_id', $contractId);
-            })
-            ->sum('amount');
-
-        return $currentDebt + $futurePayments;
+        return app(ClientPortfolioService::class)->contractDebtAsOf($contractId, $date);
     }
 
     private function contractActiveReason($contractId, Carbon $date): string
@@ -948,23 +947,8 @@ class WebController extends Controller
 
     private function overdueQuotasDetail(string $title, $sellerId, Carbon $date, int $fromDays, ?int $toDays = null): array
     {
-        $quotas = Quota::active()
-            ->whereHas('contract', function ($query) use ($sellerId, $date) {
-                $query->where('approved', 1)
-                    ->when($sellerId, function ($q, $sellerId) {
-                        return $q->where('seller_id', $sellerId);
-                    })
-                    ->whereDate('date', '<=', $date);
-            })
-            ->where('paid', 0)
-            ->whereDate('date', '<', $date)
-            ->whereDate('date', '<=', $date->copy()->subDays($fromDays))
-            ->when($toDays, function ($query, $toDays) use ($date) {
-                return $query->whereDate('date', '>=', $date->copy()->subDays($toDays));
-            })
-            ->with('contract.seller')
-            ->orderBy('date')
-            ->get();
+        $metric = $this->resolveOverdueMetric($fromDays, $toDays);
+        $quotas = $this->overdueQuotasByMetric($sellerId, $date, $metric);
 
         return [
             'title' => $title,
@@ -1059,10 +1043,9 @@ class WebController extends Controller
 
     private function overdueRangeValue($sellerId, Carbon $date, int $fromDays, int $toDays): float
     {
-        $fromDate = $date->copy()->subDays($toDays);
-        $toDate = $date->copy()->subDays($fromDays);
+        $metric = $fromDays === 1 && $toDays === 7 ? 'mora_1_7' : 'mora_8_30';
 
-        return $this->quotaDebtRangeValue($sellerId, $date, $fromDate, $toDate);
+        return (float) $this->overdueQuotasByMetric($sellerId, $date, $metric)->sum('debt');
     }
 
     private function quotaDebtRangeValue($sellerId, Carbon $date, Carbon $fromDate, Carbon $toDate): float
@@ -1110,6 +1093,81 @@ class WebController extends Controller
         $parts = preg_split('/\s+/', trim($name));
 
         return strtoupper($parts[0] ?? $name);
+    }
+
+    private function resolveOverdueMetric(int $fromDays, ?int $toDays = null): string
+    {
+        if ($fromDays === 1 && $toDays === 7) {
+            return 'mora_1_7';
+        }
+
+        if ($fromDays === 8 && $toDays === 30) {
+            return 'mora_8_30';
+        }
+
+        if ($fromDays === 8 && $toDays === null) {
+            return 'mora_gt_7';
+        }
+
+        if ($fromDays === 61 && $toDays === null) {
+            return 'mora_gt_60';
+        }
+
+        return 'mora_total';
+    }
+
+    private function overdueQuotasByMetric($sellerId, Carbon $date, string $metric)
+    {
+        $quotas = $this->baseOverdueQuotasQuery($sellerId, $date)
+            ->with('contract.seller')
+            ->orderBy('date')
+            ->get()
+            ->map(function ($quota) use ($date) {
+                $quota->days_overdue = optional($quota->date)->diffInDays($date);
+                return $quota;
+            });
+
+        $clientMaxDays = $quotas
+            ->groupBy(function ($quota) {
+                return app(ClientPortfolioService::class)->clientKey($quota->contract);
+            })
+            ->map(function ($group) {
+                return (int) $group->max('days_overdue');
+            });
+
+        return $quotas->filter(function ($quota) use ($metric, $clientMaxDays) {
+            $clientKey = app(ClientPortfolioService::class)->clientKey($quota->contract);
+            $maxDays = (int) $clientMaxDays->get($clientKey, 0);
+            $days = (int) $quota->days_overdue;
+
+            switch ($metric) {
+                case 'mora_1_7':
+                    return $maxDays >= 1 && $maxDays <= 7 && $days >= 1 && $days <= 7;
+                case 'mora_8_30':
+                    return $maxDays >= 8 && $maxDays <= 30 && $days >= 8 && $days <= 30;
+                case 'mora_gt_7':
+                    return $maxDays > 7 && $days > 7;
+                case 'mora_gt_60':
+                    return $maxDays > 60 && $days > 60;
+                case 'mora_total':
+                default:
+                    return $maxDays >= 1 && $days >= 1;
+            }
+        })->values();
+    }
+
+    private function baseOverdueQuotasQuery($sellerId, Carbon $date)
+    {
+        return Quota::active()
+            ->whereHas('contract', function ($query) use ($sellerId, $date) {
+                $query->where('approved', 1)
+                    ->when($sellerId, function ($q, $sellerId) {
+                        return $q->where('seller_id', $sellerId);
+                    })
+                    ->whereDate('date', '<=', $date);
+            })
+            ->where('paid', 0)
+            ->whereDate('date', '<', $date);
     }
 
     private function quotaDebtValue($sellerId, Carbon $date, ?int $overdueDays = null): float

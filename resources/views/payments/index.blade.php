@@ -35,7 +35,7 @@
         <div class="card-body border-bottom">
             <form>
                 <div class="row">
-                    @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit') || auth()->user()->hasRole('payments'))
                         <div class="col-md-3">
                             <div class="mb-3">
                                 <label class="form-label">Cliente</label>
@@ -409,13 +409,17 @@
             fd.append('amount', $('#amount').val());
             fd.append('payment_method_id', $('#payment_method_id').val());
             fd.append('date', $('#date').val());
-            fd.append('image', $('#image')[0].files[0]);
 
             $('input[type="checkbox"][name="people[]"]').each(function() {
                 if (this.checked) {
-                    fd.append($(this).attr('name'), $(this).val());
+                    fd.append('people[]', $(this).val());
                 }
             });
+
+            var imageInput = document.getElementById('image');
+            if (imageInput && imageInput.files && imageInput.files.length > 0) {
+                fd.append('image', imageInput.files[0]);
+            }
 
 
             $.ajax({
@@ -540,6 +544,14 @@
 
         function exportExcel() {
             const params = new URLSearchParams(window.location.search);
+            const form = document.querySelector('.card-body.border-bottom form');
+            if (form) {
+                new FormData(form).forEach(function (value, key) {
+                    if (value) {
+                        params.set(key, value);
+                    }
+                });
+            }
             const url = `{{ route('payments.excel') }}?${params.toString()}`;
             window.location.href = url;
         }

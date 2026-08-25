@@ -28,10 +28,12 @@ Route::post('login', [AuthController::class, 'check'])->name('auth.check');
 Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
 
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'restrict.payments'])->group(function () {
 
 	Route::get('/', [WebController::class, 'index']);
 	Route::get('reports/portfolio-daily/excel', [WebController::class, 'portfolioDailyExcel'])->name('reports.portfolio-daily.excel');
+	Route::get('reports/portfolio-overdue/excel', [WebController::class, 'portfolioOverdueExcel'])->name('reports.portfolio-overdue.excel');
+	Route::get('reports/portfolio-daily/clients/excel', [WebController::class, 'portfolioDailyClientsExcel'])->name('reports.portfolio-daily.clients.excel');
 	Route::get('reports/portfolio-daily/clients', [WebController::class, 'reportClients'])->name('reports.portfolio-daily.clients');
 
 	Route::get('api/reniec', [WebController::class, 'apiReniec'])->name('api.reniec');
@@ -43,6 +45,8 @@ Route::middleware('auth')->group(function () {
 	Route::get('clients/details', [ClientController::class, 'details'])->name('clients.details');
 	Route::get('clients/check', [ClientController::class, 'check'])->name('clients.check');
 	Route::get('clients/api', [ClientController::class, 'api'])->name('clients.api');
+	Route::get('clients/inactive/excel', [ClientController::class, 'inactiveExcel'])->name('clients.inactive.excel');
+	Route::get('clients/inactive', [ClientController::class, 'inactive'])->name('clients.inactive');
 	Route::get('clients/excel', [ClientController::class, 'excel'])->name('clients.excel');
 	Route::get('clients', [ClientController::class, 'index'])->name('clients.index');
 
@@ -70,8 +74,14 @@ Route::middleware('auth')->group(function () {
 	Route::post('settings', [SettingController::class, 'update'])->name('settings.update');
 
 	Route::get('expenses/excel', [ExpenseController::class, 'excel'])->name('expenses.excel');
+	Route::get('expenses/daily/excel', [ExpenseController::class, 'excelDaily'])->name('expenses.daily.excel');
+	Route::get('expenses/daily/pdf', [ExpenseController::class, 'pdfDaily'])->name('expenses.daily.pdf');
+	Route::get('expenses/contract-info/{contract}', [ExpenseController::class, 'contractInfo'])->name('expenses.contract-info');
+	Route::get('expenses/daily-contract/{contract}', [ExpenseController::class, 'dailyContractDetail'])->name('expenses.daily-contract');
+	Route::post('expenses/daily-check', [ExpenseController::class, 'toggleDailyCheck'])->name('expenses.daily-check');
 	Route::get('expenses/index_cash', [ExpenseController::class, 'index_cash'])->name('expenses.index_cash');
 	Route::get('expenses/excel_cash', [ExpenseController::class, 'excel_cash'])->name('expenses.excel_cash');
+	Route::get('expenses/{expense}/image/{slot?}', [ExpenseController::class, 'image'])->where('slot', '[12]')->defaults('slot', 1)->name('expenses.image');
 	Route::resource('expenses', ExpenseController::class);
 });
 

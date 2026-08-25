@@ -26,10 +26,8 @@ class ContractController extends Controller
         $user = auth()->user();
         $contracts = Contract::active()->when($user->hasRole('seller'), function ($query) use ($user) {
             return $query->where('seller_id', $user->id);
-        })->when($request->name, function ($query, $name) {
-            return $query->where(function ($query) use ($name) {
-                return $query->where('name', 'like', '%' . $name . '%')->orWhere('group_name', 'like', '%' . $name . '%');
-            });
+        })->when($request->name ?? $request->search, function ($query, $name) {
+            return $query->searchClient($name);
         })->when($request->seller_id, function ($query, $seller_id) {
             return $query->where('seller_id', $seller_id);
         })->when($request->start_date, function ($query, $start_date) {
@@ -78,10 +76,8 @@ class ContractController extends Controller
 
         $contracts = Contract::active()->when($user->hasRole('seller'), function ($query) use ($user) {
             return $query->where('seller_id', $user->id);
-        })->when($request->name, function ($query, $name) {
-            return $query->where(function ($query) use ($name) {
-                return $query->where('name', 'like', '%' . $name . '%')->orWhere('group_name', 'like', '%' . $name . '%');
-            });
+        })->when($request->name ?? $request->search, function ($query, $name) {
+            return $query->searchClient($name);
         })->when($request->seller_id, function ($query, $seller_id) {
             return $query->where('seller_id', $seller_id);
         })->where('paid', 0)->whereDate('last_payment_date', '>=', $start_date)->whereDate('last_payment_date', '<=', $end_date)
@@ -639,7 +635,7 @@ class ContractController extends Controller
         $options->set('chroot', base_path());
 
         // Cargar relaciones de ubicación y cuotas
-        $contract->load('district.province.department', 'quotas');
+        $contract->load('district.province.department', 'quotas', 'expenses.expensePayments.paymentMethod');
 
         //Cantidad de soles en letras
         $contract->amount_in_words = $this->convertToWords($contract->requested_amount);
@@ -675,6 +671,54 @@ class ContractController extends Controller
         } else {
             $contract->total_days = 0;
         }
+
+        $contract->loan_sheet_quota_type = strtoupper((string) $contract->quota_type);
+
+        $portfolioType = app(\App\Services\ClientPortfolioService::class)->portfolioClientType($contract);
+        if ((int) $contract->paid === 1) {
+            $contract->loan_sheet_credit_type = 'CANCELADO';
+        } elseif ($portfolioType === 'Inactivo') {
+            $contract->loan_sheet_credit_type = 'INACTIVO';
+        } elseif ($portfolioType === 'Recurrente Activo') {
+            $contract->loan_sheet_credit_type = 'RETANQUEO';
+        } else {
+            $contract->loan_sheet_credit_type = 'NUEVO';
+        }
+
+        $loanSheetPaymentFlags = [
+            'EFECTIVO' => false,
+            'YAPE' => false,
+            'CUENTA' => false,
+            'PLIN' => false,
+        ];
+
+        $latestExpense = $contract->expenses->sortByDesc('id')->first();
+        if ($latestExpense) {
+            foreach ($latestExpense->expensePayments as $expensePayment) {
+                $methodName = strtoupper((string) optional($expensePayment->paymentMethod)->name);
+
+                if (str_contains($methodName, 'EFECTIVO')) {
+                    $loanSheetPaymentFlags['EFECTIVO'] = true;
+                }
+                if (str_contains($methodName, 'YAPE')) {
+                    $loanSheetPaymentFlags['YAPE'] = true;
+                }
+                if (str_contains($methodName, 'PLIN')) {
+                    $loanSheetPaymentFlags['PLIN'] = true;
+                }
+                if (
+                    str_contains($methodName, 'BCP') ||
+                    str_contains($methodName, 'CUENTA') ||
+                    str_contains($methodName, 'TRANSFER') ||
+                    str_contains($methodName, 'DEPOSITO') ||
+                    str_contains($methodName, 'BANCO')
+                ) {
+                    $loanSheetPaymentFlags['CUENTA'] = true;
+                }
+            }
+        }
+
+        $contract->loan_sheet_payment_flags = $loanSheetPaymentFlags;
         // Crear instancia de DomPDF
         $dompdf = new Dompdf($options);
 

@@ -16,6 +16,9 @@ use App\Models\Quota;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\User;
+use App\Services\ClientPortfolioService;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -88,17 +91,23 @@ class PaymentController extends Controller
         return view('payments.charges', compact('quotas', 'sellers', 'payment_methods', 'nextQuotas'));
     }
 
-    public function dues(Request $request){
+    public function dues(Request $request, ClientPortfolioService $portfolioService){
         $user = auth()->user();
         $sellers = User::seller()->active()->get();
         $date = $request->date ? $request->date : now();
-        $quotas = Quota::active()->when($user->hasRole('seller'), function($query) use($user){
+
+        $overdueQuotas = Quota::active()->whereHas('contract', function ($query) {
+            $query->active()->where('approved', 1)->where('paid', 0);
+        })->when($user->hasRole('seller'), function($query) use($user){
             return $query->whereHas('contract', function($query) use ($user){
                 return $query->where('seller_id', $user->id);
             });
         })->when($request->name, function($query, $name){
             return $query->whereHas('contract', function($query) use($name){
-                return $query->where('name', 'like', '%'.$name.'%');
+                return $query->where(function ($query) use ($name) {
+                    $query->where('name', 'like', '%'.$name.'%')
+                        ->orWhere('group_name', 'like', '%'.$name.'%');
+                });
             });
         })->when($request->seller_id, function($query, $seller_id){
             return $query->whereHas('contract', function($query) use($seller_id){
@@ -108,18 +117,52 @@ class PaymentController extends Controller
             return $query->whereRaw('DATEDIFF(?, date) >= ?', [now()->format('Y-m-d'), $from_days]);
         })->when($request->to_days, function($query, $to_days){
             return $query->whereRaw('DATEDIFF(?, date) <= ?', [now()->format('Y-m-d'), $to_days]);
-        })->whereDate('date', '<', $date)->where('paid', 0)->with('contract.seller')->paginate(20);
+        })
+            ->where('paid', 0)
+            ->where('debt', '>', 0)
+            ->whereDate('date', '<', $date)
+            ->with('contract.seller')
+            ->get();
 
-        $payment_methods = PaymentMethod::active()->get();
-
-        $nextQuotas = Quota::whereIn('contract_id', $quotas->pluck('contract_id'))
+        $grouped = $portfolioService->groupedOverdueClients($overdueQuotas);
+        $contractIds = $grouped->pluck('contract_id')->filter();
+        $nextQuotas = Quota::whereIn('contract_id', $contractIds)
             ->where('paid', 0)
             ->groupBy('contract_id')
             ->select('contract_id', DB::raw('MIN(number) as next_number'))
             ->get()
             ->pluck('next_number', 'contract_id');
 
-        return view('payments.dues', compact('quotas', 'sellers', 'payment_methods', 'nextQuotas'));
+        $grouped = $grouped->map(function ($row) use ($nextQuotas) {
+            $nextNum = $nextQuotas[$row->contract_id] ?? null;
+            $row->next_quota_id = null;
+            $row->next_quota_debt = 0;
+            $row->people = optional($row->contract)->people;
+
+            if ($row->contract_id && $nextNum) {
+                $nextQuota = Quota::where('contract_id', $row->contract_id)->where('number', $nextNum)->first();
+                if ($nextQuota) {
+                    $row->next_quota_id = $nextQuota->id;
+                    $row->next_quota_debt = $nextQuota->debt;
+                }
+            }
+
+            return $row;
+        });
+
+        $page = (int) $request->get('page', 1);
+        $perPage = 20;
+        $groupedClients = new LengthAwarePaginator(
+            $grouped->forPage($page, $perPage)->values(),
+            $grouped->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $payment_methods = PaymentMethod::active()->get();
+
+        return view('payments.dues', compact('groupedClients', 'sellers', 'payment_methods'));
     }
 
     public function store(Request $request){
@@ -128,8 +171,9 @@ class PaymentController extends Controller
         $validator = Validator::make($request->all(), [
             'quota_id' => 'required',
             'amount' => 'required|numeric|min:0.1',
-            'payment_method_id' => 'required',
-            'date' => 'required|date'
+            'payment_method_id' => 'required|integer|exists:payment_methods,id',
+            'date' => 'required|date',
+            'image' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
         $quota = Quota::find($request->quota_id);
@@ -198,15 +242,18 @@ class PaymentController extends Controller
 
             $image = null;
 
-            if($request->hasFile('image')){
-                $image = $request->image->store('payments', 'public');
+            if ($request->hasFile('image') && $request->file('image')->isValid()) {
+                $image = $request->file('image')->store('payments', 'public');
             }
+
+            $paymentMethodId = (int) $request->input('payment_method_id');
+            $paymentDate = Carbon::parse($request->input('date'))->format('Y-m-d');
             
             Payment::create([
                 'quota_id' => $request->quota_id,
                 'amount' => $request->amount,
-                'payment_method_id' => $request->payment_method_id,
-                'date' => $request->date,
+                'payment_method_id' => $paymentMethodId,
+                'date' => $paymentDate,
                 'due_days' => $due_days,
                 'image' => $image,
                 'people' => $people
@@ -229,11 +276,17 @@ class PaymentController extends Controller
 
             DB::commit();
 
-        }catch(Exception $e){
+        } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error('Error al registrar pago: ' . $e->getMessage(), [
+                'quota_id' => $request->quota_id,
+                'payment_method_id' => $request->input('payment_method_id'),
+                'has_image' => $request->hasFile('image'),
+            ]);
 
             return response()->json([
-                'status' => false
+                'status' => false,
+                'error' => 'No se pudo guardar el pago. Verifique el método de pago y la imagen (máx. 5 MB, JPG/PNG/WEBP).',
             ]);
         }
 

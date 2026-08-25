@@ -17,7 +17,8 @@
                 <i class="ti ti-plus icon"></i> Crear nuevo
             </button>
             @if (auth()->user()->hasRole('admin') || auth()->user()->hasRole('operations'))
-                <a class="btn btn-info ms-2" href="{{ route('contracts.sentinel.excel') }}" target="_blank">
+                <a class="btn btn-info ms-2" href="{{ route('contracts.sentinel.excel', request()->all()) }}" target="_blank"
+                    title="Genera archivo Excel formato SBS con datos locales. No requiere API externa ni credenciales adicionales.">
                     <i class="ti ti-file-spreadsheet icon"></i> Sentinel
                 </a>
             @endif
@@ -30,8 +31,8 @@
                 <div class="row">
                     <div class="col-md-3">
                         <div class="mb-3">
-                            <label class="form-label">Cliente</label>
-                            <input type="text" class="form-control" name="name" value="{{ request()->name }}">
+                            <label class="form-label">Cliente, apellido o DNI</label>
+                            <input type="text" class="form-control" name="name" value="{{ request()->name ?? request()->search }}" placeholder="Buscar por nombre, apellido, grupo o DNI...">
                         </div>
                     </div>
                     @if (!auth()->user()->hasRole('seller'))
@@ -62,7 +63,9 @@
                         </div>
                     </div>
                 </div>
-                <button class="btn btn-primary">Filtrar</button>
+                <button class="btn btn-primary">
+                    <i class="ti ti-search icon"></i> Buscar
+                </button>
                 <a href="{{ route('contracts.index') }}" class="btn btn-danger">Limpiar</a>
             </form>
         </div>

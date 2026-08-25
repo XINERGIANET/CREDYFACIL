@@ -22,7 +22,7 @@ class ExpensesExport implements FromCollection, WithHeadings, WithMapping, WithS
         $request = request();
         $user = auth()->user();
         
-        $expenses = Expense::with('expensePayments.paymentMethod')->active()->when($user->hasRole('seller'), function($query) use($user){
+        $expenses = Expense::with(['expensePayments.paymentMethod', 'contract.seller', 'seller'])->active()->when($user->hasRole('seller'), function($query) use($user){
             return $query->where('seller_id', $user->id);
         })->when($request->description, function($query, $description){
             return $query->where('description', 'like', '%'.$description.'%');
@@ -36,44 +36,21 @@ class ExpensesExport implements FromCollection, WithHeadings, WithMapping, WithS
             return $query->whereDate('date', '>=', $start_date);
         })->when($request->end_date, function($query, $end_date){
             return $query->whereDate('date', '<=', $end_date);
-        })->latest('date')->latest('id')->get();
+        })->latest('date')->latest('id')
+            ->whereNotNull('contract_id')
+            ->get();
 
         return $expenses;
     }
 
     public function map($expense): array
     {
-        return [
-            $expense->description,
-            optional($expense->seller)->name,
-            $expense->contract ? optional($expense->contract)->client() : 'Gastos generales',
-            // calcular monto total a partir de expensePayments
-            $expense->expensePayments->sum('amount'),
-            // mostrar métodos de pago (primario / secundario si existe)
-            (function($expense){
-                $first = $expense->expensePayments->first();
-                if(!$first) return '';
-                $name = optional($first->paymentMethod)->name;
-                if($expense->expensePayments->count() > 1){
-                    $second = $expense->expensePayments->get(1);
-                    $name .= ' / ' . optional($second->paymentMethod)->name;
-                }
-                return $name;
-            })($expense),
-            $expense->date->format('d/m/Y')
-        ];
+        return StandardExcelFormat::fromExpense($expense);
     }
 
     public function headings(): array
     {
-        return [
-            'Descripción',
-            'Asesor C.',
-            'Cliente/Grupo',
-            'Monto',
-            'Método de pago',
-            'Fecha'
-        ];
+        return StandardExcelFormat::headings();
     }
 
     public function styles(Worksheet $sheet)

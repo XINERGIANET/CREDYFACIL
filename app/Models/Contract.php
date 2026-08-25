@@ -54,6 +54,57 @@ class Contract extends Model
         return $query->where('deleted', 0);
     }
 
+    public function scopeSearchClient($query, $search, $tablePrefix = '')
+    {
+        if (empty(trim((string) $search))) {
+            return $query;
+        }
+
+        $words = array_filter(explode(' ', trim((string) $search)));
+        $nameCol = $tablePrefix ? $tablePrefix . '.name' : 'name';
+        $groupCol = $tablePrefix ? $tablePrefix . '.group_name' : 'group_name';
+        $docCol = $tablePrefix ? $tablePrefix . '.document' : 'document';
+        $peopleCol = $tablePrefix ? $tablePrefix . '.people' : 'people';
+
+        return $query->where(function ($q) use ($words, $nameCol, $groupCol, $docCol, $peopleCol) {
+            foreach ($words as $word) {
+                $q->where(function ($sub) use ($word, $nameCol, $groupCol, $docCol, $peopleCol) {
+                    $sub->where($nameCol, 'like', '%' . $word . '%')
+                        ->orWhere($groupCol, 'like', '%' . $word . '%')
+                        ->orWhere($docCol, 'like', '%' . $word . '%')
+                        ->orWhere($peopleCol, 'like', '%' . $word . '%');
+                });
+            }
+        });
+    }
+
+    public function getQuotaTypeAttribute()
+    {
+        if (isset($this->attributes['quota_type']) && !empty($this->attributes['quota_type'])) {
+            return $this->attributes['quota_type'];
+        }
+
+        $quotaTypeMap = [1 => 'Semanal', 2 => 'Catorcenal', 4 => 'Mensual'];
+
+        if (!is_null($this->type_quota) && isset($quotaTypeMap[(int) $this->type_quota])) {
+            return $quotaTypeMap[(int) $this->type_quota];
+        }
+
+        $firstTwo = $this->quotas()->orderBy('date')->limit(2)->get();
+        if ($firstTwo->count() > 1) {
+            $daysDiff = \Carbon\Carbon::parse($firstTwo[0]->date)->diffInDays(\Carbon\Carbon::parse($firstTwo[1]->date));
+            if ($daysDiff >= 25 && $daysDiff <= 35) {
+                return 'Mensual';
+            } elseif ($daysDiff >= 12 && $daysDiff <= 16) {
+                return 'Catorcenal';
+            } elseif ($daysDiff >= 5 && $daysDiff <= 9) {
+                return 'Semanal';
+            }
+        }
+
+        return 'Semanal';
+    }
+
     public function client()
     {
         if ($this->client_type == 'Personal') {
@@ -65,17 +116,7 @@ class Contract extends Model
 
     public function type()
     {
-        if ($this->client_type == 'Personal') {
-            $contracts = Contract::where('document', $this->document)->active()->count();
-
-            if ($contracts > 1) {
-                return 'Recurrente';
-            }
-
-            return 'Nuevo';
-        }
-
-        return 'Nuevo';
+        return app(\App\Services\ClientPortfolioService::class)->portfolioClientType($this);
     }
 
     public function seller()

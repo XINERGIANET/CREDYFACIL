@@ -14,10 +14,68 @@
             margin: auto;
             padding: auto;
         }
+
+        .loan-sheet {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-family: Helvetica, sans-serif;
+            color: #0b4ea2;
+            font-size: 9pt;
+        }
+
+        .loan-sheet td,
+        .loan-sheet th {
+            border: 1px solid #111;
+            padding: 4px 6px;
+            vertical-align: middle;
+        }
+
+        .loan-sheet .title {
+            font-size: 21pt;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .loan-sheet .label {
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .loan-sheet .value {
+            color: #111;
+            font-weight: normal;
+        }
+
+        .loan-sheet .center {
+            text-align: center;
+        }
+
+        .loan-sheet .box {
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .loan-sheet .mark {
+            color: #111;
+            font-size: 12pt;
+            font-weight: bold;
+        }
     </style>
 </head>
 
 <body>
+    @php
+        $civilStatus = strtoupper((string) ($contract->civil_status ?? ''));
+        $homeType = strtoupper((string) ($contract->home_type ?? ''));
+        $quotaType = strtoupper((string) ($contract->loan_sheet_quota_type ?? $contract->quota_type ?? ''));
+        $creditType = strtoupper((string) ($contract->loan_sheet_credit_type ?? ''));
+        $paymentFlags = $contract->loan_sheet_payment_flags ?? [];
+        $mark = function ($condition) {
+            return $condition ? 'X' : '';
+        };
+    @endphp
     <h4 style="text-align: center;">CONTRATO DE PRESTAMO PERSONAL</h4>
     <p>Conste por el presente documento el contrato de mutuo que celebran de una parte: </p>
     <p style="text-align: justify"><strong>CREDYFACIL SOLUCIONES S.A.C</strong> identificado con registro único con
@@ -130,6 +188,129 @@
             </td>
         </tr>
     </table>
+    <div style="page-break-after: always;"></div>
+
+    <table class="loan-sheet">
+        <colgroup>
+            <col style="width: 14%">
+            <col style="width: 15%">
+            <col style="width: 15%">
+            <col style="width: 14%">
+            <col style="width: 14%">
+            <col style="width: 14%">
+            <col style="width: 14%">
+        </colgroup>
+        <tr>
+            <td colspan="7" class="title">SOLICITUD DE PRESTAMO</td>
+        </tr>
+        <tr>
+            <td class="label">Nombre</td>
+            <td colspan="6" class="value">{{ $contract->name }}</td>
+        </tr>
+        <tr>
+            <td class="label">DNI</td>
+            <td colspan="2" class="value">{{ $contract->document }}</td>
+            <td colspan="2" class="label center">Telefono</td>
+            <td colspan="2" class="value">{{ $contract->phone }}</td>
+        </tr>
+        <tr>
+            <td class="label">Direccion</td>
+            <td colspan="6" class="value">{{ $contract->address }}</td>
+        </tr>
+        <tr>
+            <td class="label">Distrito</td>
+            <td colspan="2" class="value">{{ $contract->district_name }}</td>
+            <td class="label center">Medio de pago</td>
+            <td class="box">EFECTIVO <span class="mark">{{ $mark($paymentFlags['EFECTIVO'] ?? false) }}</span></td>
+            <td class="box">YAPE <span class="mark">{{ $mark($paymentFlags['YAPE'] ?? false) }}</span></td>
+            <td class="box">CUENTA <span class="mark">{{ $mark($paymentFlags['CUENTA'] ?? false) }}</span></td>
+        </tr>
+        <tr>
+            <td class="label">Referencia</td>
+            <td colspan="5" class="value">{{ $contract->reference }}</td>
+            <td class="box">PLIN <span class="mark">{{ $mark($paymentFlags['PLIN'] ?? false) }}</span></td>
+        </tr>
+        <tr>
+            <td class="label">Tipo de vivienda</td>
+            <td class="box">PROPIA <span class="mark">{{ $mark($homeType === 'PROPIA') }}</span></td>
+            <td></td>
+            <td class="box">ALQUILADA <span class="mark">{{ $mark($homeType === 'ALQUILADA') }}</span></td>
+            <td colspan="3"></td>
+        </tr>
+        <tr>
+            <td class="label center" rowspan="2">Estado civil</td>
+            <td class="box">CASADO(A) <span class="mark">{{ $mark($civilStatus === 'CASADO') }}</span></td>
+            <td></td>
+            <td class="box">DIVORCIADO(A) <span class="mark">{{ $mark($civilStatus === 'DIVORCIADO') }}</span></td>
+            <td colspan="3"></td>
+        </tr>
+        <tr>
+            <td class="box">VIUDO(A) <span class="mark">{{ $mark($civilStatus === 'VIUDO') }}</span></td>
+            <td></td>
+            <td class="box">SOLTERO(A) <span class="mark">{{ $mark($civilStatus === 'SOLTERO') }}</span></td>
+            <td colspan="3"></td>
+        </tr>
+        <tr>
+            <td class="label">Nombre del esposo(a)</td>
+            <td colspan="6" class="value">{{ $contract->husband_name }}</td>
+        </tr>
+        <tr>
+            <td class="label center">DNI esposo(a)</td>
+            <td colspan="3" class="value">{{ $contract->husband_document }}</td>
+            <td class="label center">Tasa de interes</td>
+            <td colspan="2" class="value center">{{ number_format($contract->percentage, 2) }} %</td>
+        </tr>
+        <tr>
+            <td class="label center">Direccion de trabajo/negocio</td>
+            <td colspan="6" class="value">{{ $contract->business_address }}</td>
+        </tr>
+        <tr>
+            <td class="label center">Rubro del negocio</td>
+            <td colspan="6" class="value">{{ $contract->business_line }}</td>
+        </tr>
+        <tr>
+            <td class="label center">Numero de cuotas</td>
+            <td class="value center">{{ $contract->quotas_number }}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td class="label">Seguro</td>
+            <td colspan="3" class="value center">S/. {{ number_format($contract->insurance_amount ?? 0, 2) }}</td>
+            <td colspan="2" class="label center">Tipo de cuota</td>
+            <td class="label center">Tipo de credito</td>
+        </tr>
+        <tr>
+            <td class="label center" rowspan="3">Tipo de cuota</td>
+            <td class="box">SEMANAL <span class="mark">{{ $mark($quotaType === 'SEMANAL') }}</span></td>
+            <td></td>
+            <td rowspan="3" colspan="2" class="center" style="font-size: 18pt; font-weight: bold;">TIPO DE CREDITO</td>
+            <td class="box">NUEVO <span class="mark">{{ $mark($creditType === 'NUEVO') }}</span></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td class="box">MENSUAL <span class="mark">{{ $mark($quotaType === 'MENSUAL') }}</span></td>
+            <td></td>
+            <td class="box">CANCELADO <span class="mark">{{ $mark($creditType === 'CANCELADO') }}</span></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td class="box">CATORCENAL <span class="mark">{{ $mark($quotaType === 'CATORCENAL') }}</span></td>
+            <td></td>
+            <td class="box">INACTIVO <span class="mark">{{ $mark($creditType === 'INACTIVO') }}</span></td>
+            <td class="box">RETANQUEO <span class="mark">{{ $mark($creditType === 'RETANQUEO') }}</span></td>
+        </tr>
+        <tr>
+            <td class="label">Fecha</td>
+            <td colspan="2" class="value">{{ \Carbon\Carbon::parse($contract->date)->format('d/m/Y') }}</td>
+            <td colspan="2" class="label center">Monto solicitado</td>
+            <td colspan="2" class="value"><strong>S/. {{ number_format($contract->requested_amount, 2) }}</strong></td>
+        </tr>
+    </table>
+
     <div style="page-break-after: always;"></div>
     <h4 style="text-align: center;"><strong>ANEXO 1 – A. –COMPROBANTE DE ENTREGA.</strong></h4>
     <p style="margin: 3px 0; line-height: 1.3;">NUMERO DE CONTRATO: N° {{ $contract->id }}</p>

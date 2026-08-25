@@ -5,18 +5,45 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use App\Exports\ExpensesExport;
 use App\Exports\ExpensesCashExport;
+use App\Exports\DisbursementsDailyExport;
+use App\Services\DisbursementDailyService;
 use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use App\Models\Expense;
+use App\Models\Contract;
+use App\Models\DisbursementCheck;
 use App\Models\User;
 use App\Models\PaymentMethod;
 use App\Models\ExpensePayment;
 
 class ExpenseController extends Controller
 {
-    public function index(Request $request){
+    public function index(Request $request, DisbursementDailyService $disbursementService){
         $user = auth()->user();
+        $dailyDate = $request->daily_date ?: now()->format('Y-m-d');
+        $dailyCarbon = Carbon::parse($dailyDate);
+        $dailySellerId = $request->daily_seller_id ?: null;
+
+        $dailyRows = $disbursementService->buildDailyRows($dailyCarbon, $user, $dailySellerId);
+        $dayExpenses = Expense::with('expensePayments.paymentMethod')->active()
+            ->whereNotNull('contract_id')
+            ->whereDate('date', $dailyCarbon)
+            ->when($user->hasRole('seller'), function ($query) use ($user) {
+                return $query->where('seller_id', $user->id);
+            })
+            ->when($dailySellerId, function ($query, $dailySellerId) {
+                return $query->where('seller_id', $dailySellerId);
+            })
+            ->get();
+        $dailySummary = $disbursementService->summary($dailyRows, $dayExpenses);
+        $dayBcpPayments = $disbursementService->dayBcpPayments($dailyCarbon, $user, $dailySellerId);
+
         $expensesQuery = Expense::with('expensePayments.paymentMethod')->active()
             ->when($user->hasRole('seller'), function($query) use($user){
                 return $query->where('seller_id', $user->id);
@@ -50,7 +77,145 @@ class ExpenseController extends Controller
         $sellers = User::seller()->where('state', 0)->active()->get();
         $payment_methods = PaymentMethod::all();
         
-        return view('expenses.index', compact('expenses', 'sellers', 'payment_methods', 'total'));
+        return view('expenses.index', compact(
+            'expenses',
+            'sellers',
+            'payment_methods',
+            'total',
+            'dailyDate',
+            'dailyRows',
+            'dailySummary',
+            'dayBcpPayments',
+            'dailySellerId'
+        ));
+    }
+
+    public function dailyContractDetail(Request $request, Contract $contract, DisbursementDailyService $disbursementService)
+    {
+        $date = $request->date ?: now()->format('Y-m-d');
+        $user = auth()->user();
+
+        if ($user->hasRole('seller') && (int) $contract->seller_id !== (int) $user->id) {
+            return response()->json(['status' => false, 'error' => 'No autorizado'], 403);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $disbursementService->contractDetail($contract, Carbon::parse($date)),
+        ]);
+    }
+
+    public function contractInfo(Request $request, Contract $contract, DisbursementDailyService $disbursementService)
+    {
+        $date = $request->date ?: ($contract->date ? $contract->date->format('Y-m-d') : now()->format('Y-m-d'));
+        $user = auth()->user();
+
+        if ($user->hasRole('seller') && (int) $contract->seller_id !== (int) $user->id) {
+            return response()->json(['status' => false, 'error' => 'No autorizado'], 403);
+        }
+
+        $data = $disbursementService->enrichContract(
+            $contract->load(['seller', 'expenses.expensePayments.paymentMethod']),
+            Carbon::parse($date),
+            false
+        );
+
+        return response()->json([
+            'status' => true,
+            'data' => $data,
+        ]);
+    }
+
+    public function toggleDailyCheck(Request $request, DisbursementDailyService $disbursementService)
+    {
+        $validator = Validator::make($request->all(), [
+            'contract_id' => 'required|exists:contracts,id',
+            'date' => 'required|date',
+            'marked' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'error' => $validator->errors()->first(),
+            ]);
+        }
+
+        $contract = Contract::findOrFail($request->contract_id);
+        $user = auth()->user();
+
+        if ($user->hasRole('seller') && (int) $contract->seller_id !== (int) $user->id) {
+            return response()->json(['status' => false, 'error' => 'No autorizado'], 403);
+        }
+
+        $check = DisbursementCheck::updateOrCreate(
+            [
+                'contract_id' => $request->contract_id,
+                'date' => $request->date,
+            ],
+            [
+                'marked' => (bool) $request->marked,
+                'user_id' => auth()->id(),
+            ]
+        );
+
+        return response()->json([
+            'status' => true,
+            'marked' => (bool) $check->marked,
+        ]);
+    }
+
+    public function excelDaily(Request $request, DisbursementDailyService $disbursementService)
+    {
+        $date = $request->daily_date ?: now()->format('Y-m-d');
+        $user = auth()->user();
+        $rows = $disbursementService->buildDailyRows(Carbon::parse($date), $user, $request->daily_seller_id);
+        $dayExpenses = Expense::with('expensePayments')->active()
+            ->whereNotNull('contract_id')
+            ->whereDate('date', $date)
+            ->when($user->hasRole('seller'), function ($query) use ($user) {
+                return $query->where('seller_id', $user->id);
+            })
+            ->when($request->daily_seller_id, function ($query, $sellerId) {
+                return $query->where('seller_id', $sellerId);
+            })
+            ->get();
+        $summary = $disbursementService->summary($rows, $dayExpenses);
+        $name = 'Desembolsos_dia_' . Carbon::parse($date)->format('d_m_Y') . '.xlsx';
+
+        return Excel::download(new DisbursementsDailyExport($rows->values()->all(), $summary, $date), $name);
+    }
+
+    public function pdfDaily(Request $request, DisbursementDailyService $disbursementService)
+    {
+        $date = $request->daily_date ?: now()->format('Y-m-d');
+        $user = auth()->user();
+        $rows = $disbursementService->buildDailyRows(Carbon::parse($date), $user, $request->daily_seller_id);
+        $dayExpenses = Expense::with('expensePayments')->active()
+            ->whereNotNull('contract_id')
+            ->whereDate('date', $date)
+            ->when($user->hasRole('seller'), function ($query) use ($user) {
+                return $query->where('seller_id', $user->id);
+            })
+            ->when($request->daily_seller_id, function ($query, $sellerId) {
+                return $query->where('seller_id', $sellerId);
+            })
+            ->get();
+        $summary = $disbursementService->summary($rows, $dayExpenses);
+        $sellerName = null;
+
+        if ($request->daily_seller_id) {
+            $sellerName = optional(User::find($request->daily_seller_id))->name;
+        }
+
+        $pdf = Pdf::loadView('expenses.daily_pdf', [
+            'rows' => $rows,
+            'summary' => $summary,
+            'dateLabel' => Carbon::parse($date)->format('d/m/Y'),
+            'sellerName' => $sellerName,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('Desembolsos_dia_' . Carbon::parse($date)->format('d_m_Y') . '.pdf');
     }
 
     public function index_cash(Request $request){
@@ -96,7 +261,8 @@ class ExpenseController extends Controller
             'description' => 'required',
             'payment_method_id' => 'required',
             'payment_amount' => 'required|numeric',
-            'date' => 'required|date'
+            'date' => 'required|date',
+            'request_uid' => 'required|string|max:64'
         ]);
 
         if($validator->fails()){
@@ -106,40 +272,91 @@ class ExpenseController extends Controller
             ]);
         }
 
-        $image = null;
-
-        if($request->hasFile('image')){
-            $image = $request->image->store('expenses', 'public');
+        if (Expense::where('request_uid', $request->request_uid)->exists()) {
+            return response()->json([
+                'status' => true,
+                'duplicate_ignored' => true,
+            ]);
         }
 
-        $expense = Expense::create([
-            'description' => $request->description,
-            'seller_id' => $request->seller_id,
-            'contract_id' => $request->contract_id,
-            'payment_method_id' => $request->payment_method_id,
-            'date' => $request->date,
-            'image' => $image
-        ]);
+        if ($request->contract_id && Expense::activeDisbursementExists((int) $request->contract_id)) {
+            return response()->json([
+                'status' => false,
+                'error' => 'Ya existe un desembolso registrado para este préstamo. Edite o elimine el registro existente.',
+            ]);
+        }
 
-        // Guardar métodos de pago asociados (tabla expenses_payments) con montos
-        if ($expense) {
-            ExpensePayment::where('expenses_id', $expense->id)->delete();
+        $image = null;
+        $image2 = null;
 
-            if ($request->payment_method_id) {
-                ExpensePayment::create([
-                    'expenses_id' => $expense->id,
+        if ($request->hasFile('image')) {
+            $image = $request->file('image')->store('expenses', 'public');
+        }
+
+        if ($request->hasFile('image_2')) {
+            $image2 = $request->file('image_2')->store('expenses', 'public');
+        }
+
+        try {
+            DB::transaction(function () use ($request, $image, $image2, &$expense) {
+                if ($request->contract_id) {
+                    $exists = Expense::active()
+                        ->where('contract_id', (int) $request->contract_id)
+                        ->lockForUpdate()
+                        ->exists();
+
+                    if ($exists) {
+                        throw new \RuntimeException('duplicate_disbursement');
+                    }
+                }
+
+                $expense = Expense::create([
+                    'description' => $request->description,
+                    'seller_id' => $request->seller_id,
+                    'contract_id' => $request->contract_id,
+                    'request_uid' => $request->request_uid,
                     'payment_method_id' => $request->payment_method_id,
-                    'amount' => $request->payment_amount
+                    'date' => $request->date,
+                    'image' => $image,
+                    'image_2' => $image2,
+                ]);
+
+                ExpensePayment::where('expenses_id', $expense->id)->delete();
+
+                if ($request->payment_method_id) {
+                    ExpensePayment::create([
+                        'expenses_id' => $expense->id,
+                        'payment_method_id' => $request->payment_method_id,
+                        'amount' => $request->payment_amount
+                    ]);
+                }
+
+                if ($request->payment_method_id_2 && $request->payment_amount_2) {
+                    ExpensePayment::create([
+                        'expenses_id' => $expense->id,
+                        'payment_method_id' => $request->payment_method_id_2,
+                        'amount' => $request->payment_amount_2
+                    ]);
+                }
+            });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'duplicate_disbursement') {
+                return response()->json([
+                    'status' => false,
+                    'error' => 'Ya existe un desembolso registrado para este préstamo. Edite o elimine el registro existente.',
                 ]);
             }
 
-            if ($request->payment_method_id_2 && $request->payment_amount_2) {
-                ExpensePayment::create([
-                    'expenses_id' => $expense->id,
-                    'payment_method_id' => $request->payment_method_id_2,
-                    'amount' => $request->payment_amount_2
+            throw $e;
+        } catch (QueryException $e) {
+            if ((string) $e->getCode() === '23000' && str_contains($e->getMessage(), 'request_uid')) {
+                return response()->json([
+                    'status' => true,
+                    'duplicate_ignored' => true,
                 ]);
             }
+
+            throw $e;
         }
 
         return response()->json([
@@ -162,7 +379,9 @@ class ExpenseController extends Controller
             'payment_amount' => $first ? $first->amount : null,
             'payment_method_id_2' => $second ? $second->payment_method_id : null,
             'payment_amount_2' => $second ? $second->amount : null,
-            'date' => $expense->date->format('Y-m-d')
+            'date' => $expense->date->format('Y-m-d'),
+            'has_image' => (bool) $expense->image,
+            'has_image_2' => (bool) $expense->image_2,
         ]);
     }
 
@@ -183,9 +402,14 @@ class ExpenseController extends Controller
         }
 
         $image = $expense->image;
+        $image2 = $expense->image_2;
 
-        if($request->hasFile('image')){
-            $image = $request->image->store('expenses', 'public');
+        if ($request->hasFile('image')) {
+            $image = $request->file('image')->store('expenses', 'public');
+        }
+
+        if ($request->hasFile('image_2')) {
+            $image2 = $request->file('image_2')->store('expenses', 'public');
         }
 
 
@@ -194,7 +418,8 @@ class ExpenseController extends Controller
             'seller_id' => $request->seller_id,
             'payment_method_id' => $request->payment_method_id,
             'date' => $request->date,
-            'image' => $image
+            'image' => $image,
+            'image_2' => $image2,
         ]);
 
         // sincronizar expenses_payments: eliminar y volver a crear según lo enviado (con montos)
@@ -237,6 +462,29 @@ class ExpenseController extends Controller
     public function excel_cash(Request $request){
         $name = "Egresos_caja_".now()->format('d_m_Y').".xlsx";
         return Excel::download(new ExpensesCashExport, $name);
+    }
+
+    public function image(Expense $expense, $slot = 1)
+    {
+        $user = auth()->user();
+
+        if ($user->hasRole('seller') && (int) $expense->seller_id !== (int) $user->id) {
+            abort(403);
+        }
+
+        $field = (int) $slot === 2 ? 'image_2' : 'image';
+        $pathValue = $expense->{$field};
+
+        if (!$pathValue || !Storage::disk('public')->exists($pathValue)) {
+            abort(404);
+        }
+
+        $path = Storage::disk('public')->path($pathValue);
+        $mime = mime_content_type($path) ?: 'application/octet-stream';
+
+        return response()->file($path, [
+            'Content-Type' => $mime,
+        ]);
     }
 
 }

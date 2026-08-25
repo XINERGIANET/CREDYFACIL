@@ -18,16 +18,16 @@
 		</a>
 	</div>
 	@endif
-	@if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
 	<div class="card-body border-bottom">
-		<form>
+		<form method="GET" action="{{ route('clients.index') }}">
 			<div class="row">
 				<div class="col-md-3">
 					<div class="mb-3">
-						<label class="form-label">Cliente</label>
-						<input type="text" class="form-control" name="name" value="{{ request()->name }}">
+						<label class="form-label">Cliente, apellido o DNI</label>
+						<input type="text" class="form-control" name="name" value="{{ request()->name ?? request()->search }}" placeholder="Buscar por nombre, apellido, grupo o DNI...">
 					</div>
 				</div>
+				@if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('credit'))
 				<div class="col-md-3">
 					<div class="mb-3">
 						<label class="form-label">Asesor comercial</label>
@@ -39,6 +39,7 @@
 						</select>
 					</div>
 				</div>
+				@endif
 				<div class="col-md-3">
 					<div class="mb-3">
 						<label class="form-label">Inicio del préstamo</label>
@@ -52,11 +53,12 @@
 					</div>
 				</div>
 			</div>
-			<button class="btn btn-primary">Filtrar</button>
+			<button class="btn btn-primary">
+				<i class="ti ti-search icon"></i> Buscar
+			</button>
 			<a href="{{ route('clients.index') }}" class="btn btn-danger">Limpiar</a>
 		</form>
 	</div>
-	@endif
 	<div class="table-responsive">
 		<table class="table card-table table-vcenter">
 			<thead>

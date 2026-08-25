@@ -18,6 +18,7 @@ class PaymentsExport implements FromCollection, WithHeadings, WithMapping, WithS
         $request = request();
 
         return Payment::active()
+            ->whereHas('quota.contract')
             ->when($user->hasRole('seller'), function ($query) use ($user) {
                 return $query->whereHas('quota.contract', function ($query) use ($user) {
                     return $query->where('seller_id', $user->id);
@@ -54,37 +55,24 @@ class PaymentsExport implements FromCollection, WithHeadings, WithMapping, WithS
 
     public function map($payment): array
     {
-        $contract = optional(optional($payment->quota)->contract);
-        $b = $payment->capitalInterestInsuranceBreakdown();
+        $breakdown = $payment->capitalInterestInsuranceBreakdown();
 
-        return [
-            $contract->client(),
-            optional($contract->seller)->name,
-            optional($payment->quota)->number,
-            $b['capital'],
-            $b['interest'],
-            $b['insurance'],
-            $payment->amount,
-            optional($payment->payment_method)->name,
-            optional($payment->date)->format('d/m/Y'),
-            $payment->due_days,
-        ];
+        return array_merge(StandardExcelFormat::fromPayment($payment), [
+            round($breakdown['capital'], 2),
+            round($breakdown['interest'], 2),
+            round($breakdown['insurance'], 2),
+            optional($payment->payment_method)->name ?? '',
+        ]);
     }
 
     public function headings(): array
     {
-        return [
-            'Cliente',
-            'Asesor comercial',
-            'Número de cuota',
+        return array_merge(StandardExcelFormat::headings(), [
             'Capital',
             'Interés',
             'Seguro',
-            'Monto',
-            'Método de pago',
-            'Fecha de pago',
-            'Días de mora',
-        ];
+            'Metodo de pago',
+        ]);
     }
 
     public function styles(Worksheet $sheet)

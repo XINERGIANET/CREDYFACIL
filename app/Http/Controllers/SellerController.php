@@ -9,15 +9,27 @@ use App\Models\Contract;
 use App\Models\User;
 use App\Exports\SellerContractsExport;
 use App\Exports\SellerOverdueExport;
+use App\Services\SellerOverdueService;
 use Maatwebsite\Excel\Facades\Excel;
 
 class SellerController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, SellerOverdueService $overdueService)
     {
-        $sellers = User::seller()->active()->withCount('contracts')->when($request->search, function ($query, $search) {
+        $sellers = User::seller()->active()->withCount([
+            'contracts' => function ($query) {
+                $query->where('deleted', 0);
+            },
+        ])->when($request->search, function ($query, $search) {
             return $query->where('name', 'like', '%' . $search . '%');
         })->paginate(20);
+
+        foreach ($sellers as $seller) {
+            $seller->overdue_clients_count = $overdueService->overdueClientsCount($seller->id);
+            $seller->total_disbursed = (float) Contract::active()
+                ->where('seller_id', $seller->id)
+                ->sum('payable_amount');
+        }
 
         return view('sellers.index', compact('sellers'));
     }
@@ -137,30 +149,13 @@ class SellerController extends Controller
         ]);
     }
 
-    public function overdueContracts(Request $request, User $seller)
+    public function overdueContracts(Request $request, User $seller, SellerOverdueService $overdueService)
     {
-        $contracts = Contract::where('seller_id', $seller->id)
-            ->whereHas('quotas', function($q){
-                $q->where('paid', 0)->whereDate('date', '<', now());
-            })->with('quotas')->get();
-
-        $contracts = $contracts->map(function($contract) {
-            $oldestOverdueQuota = $contract->quotas
-                ->where('paid', 0)
-                ->filter(fn($q) => \Carbon\Carbon::parse($q->date)->lt(now()))
-                ->sortBy('date')
-                ->first();
-
-            $contract->days_overdue = $oldestOverdueQuota
-                ? (int) \Carbon\Carbon::parse($oldestOverdueQuota->date)->diffInDays(now())
-                : 0;
-
-            return $contract;
-        });
+        $contracts = $overdueService->overdueContractsWithDetails($seller->id);
 
         return response()->json([
             'status' => true,
-            'contracts' => $contracts
+            'contracts' => $contracts,
         ]);
     }
 

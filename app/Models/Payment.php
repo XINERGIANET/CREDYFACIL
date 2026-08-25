@@ -28,6 +28,17 @@ class Payment extends Model
         return $query->where('deleted', 0);
     }
 
+    public function scopeBcp($query)
+    {
+        $ids = PaymentMethod::whereRaw('UPPER(name) LIKE ?', ['%BCP%'])->pluck('id');
+
+        if ($ids->isEmpty()) {
+            return $query->whereRaw('0 = 1');
+        }
+
+        return $query->whereIn('payment_method_id', $ids);
+    }
+
     public function quota(){
         return $this->belongsTo(Quota::class);
     }

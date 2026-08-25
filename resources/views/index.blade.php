@@ -374,6 +374,12 @@
     };
 @endphp
 <div class="card mb-4 shadow-sm">
+    <div class="card-header d-flex justify-content-end align-items-center">
+        <a class="btn btn-sm btn-success btn-report-excel" href="{{ route('reports.portfolio-overdue.excel', ['date' => $overdueDate->format('Y-m-d')]) }}" target="_blank">
+            <i class="ti ti-file-spreadsheet"></i>
+            <span>Excel</span>
+        </a>
+    </div>
     <div class="table-responsive">
         <table class="table table-bordered table-portfolio table-overdue mb-0">
             <thead>
@@ -539,6 +545,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Detalle de Clientes al Día</h5>
+                <a href="#" id="btnPortfolioClientsExcel" class="btn btn-success btn-sm me-2 d-none" target="_blank">
+                    <i class="ti ti-file-export"></i> Excel
+                </a>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0">
@@ -573,10 +582,22 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 	$(document).ready(function(){
+        var portfolioExportMetrics = ['initial_clients', 'current_clients', 'new_clients', 'previous_disbursement', 'previous_operations', 'current_disbursement', 'current_operations'];
+
         $('.portfolio-detail-cell').on('click', function() {
             var sellerId = $(this).data('seller-id');
             var date = $(this).data('date');
             var metric = $(this).data('metric');
+
+            if (portfolioExportMetrics.indexOf(metric) !== -1) {
+                var excelUrl = '{{ route('reports.portfolio-daily.clients.excel') }}' +
+                    '?seller_id=' + encodeURIComponent(sellerId) +
+                    '&date=' + encodeURIComponent(date) +
+                    '&metric=' + encodeURIComponent(metric);
+                $('#btnPortfolioClientsExcel').attr('href', excelUrl).removeClass('d-none');
+            } else {
+                $('#btnPortfolioClientsExcel').addClass('d-none');
+            }
             
             $('#clientsModal .modal-title').text('Detalle');
             $('#clientsModal thead').html('<tr><th>Detalle</th></tr>');

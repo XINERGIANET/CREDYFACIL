@@ -19,13 +19,13 @@
 		<div class="card-body border-bottom">
 			<form>
 				<div class="row">
-					@if(auth()->user()->hasRole('admin'))
-						<div class="col-md-3">
-							<div class="mb-3">
-								<label class="form-label">Cliente</label>
-								<input type="text" class="form-control" name="name" value="{{ request()->name }}">
-							</div>
+					<div class="col-md-3">
+						<div class="mb-3">
+							<label class="form-label">Cliente, apellido o DNI</label>
+							<input type="text" class="form-control" name="name" value="{{ request()->name ?? request()->search }}" placeholder="Buscar por nombre, apellido, grupo o DNI...">
 						</div>
+					</div>
+					@if(auth()->user()->hasRole('admin'))
 						<div class="col-md-3">
 							<div class="mb-3">
 								<label class="form-label">Asesor comercial</label>
@@ -55,7 +55,9 @@
 						</div>
 					</div>
 				</div>
-				<button class="btn btn-primary">Filtrar</button>
+				<button class="btn btn-primary">
+					<i class="ti ti-search icon"></i> Buscar
+				</button>
 				<a href="{{ route('contracts.ending') }}" class="btn btn-danger">Limpiar</a>
 			</form>
 		</div>
