@@ -579,33 +579,72 @@ class WebController extends Controller
                     'manual_out' => $manualOut,
                 ];
             });
-    }
-
-    public function apiReniec(Request $request){
-        $response = Http::withToken((string) config('apireniec.key'))
-            ->timeout(15)
-            ->post((string) config('apireniec.url'), [
-                'dni' => $request->dni,
-            ]);
-
-        $data = (array) $response->json();
-        $estado = (bool) ($data['success'] ?? false);
-        $resultado = (array) ($data['data'] ?? []);
-
-        if($response->successful() && $estado === true && !empty($resultado['nombre_completo'])){
-
-            return response()->json([
-                'status' => true,
-                'name' => $resultado['nombre_completo']
-            ]);
-
-        }else{
-
-            return response()->json([
-                'status' => false
-            ]);
-
         }
+        public function apiReniec(Request $request){
+        $dni = trim((string) $request->input('dni'));
+        if (empty($dni) || strlen($dni) !== 8 || !is_numeric($dni)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'DNI inválido'
+            ]);
+        }
+
+        $apiUrl = (string) config('apireniec.url', 'https://api.perudevs.com/api/v1/dni/simple');
+        $apiKey = (string) config('apireniec.key', 'cGVydWRldnMucHJvZHVjdGlvbi5maXRjb2RlcnMuNjlhMGJlN2YwNGEyNjc2MDk2ZjkzZDYz');
+
+        $attemptRequest = function($url, $key) use ($dni) {
+            try {
+                if (str_contains($url, 'perudevs.com')) {
+                    return Http::timeout(8)->get($url, [
+                        'document' => $dni,
+                        'key' => $key,
+                    ]);
+                } else {
+                    return Http::withToken($key)->timeout(8)->post($url, [
+                        'dni' => $dni,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                return null;
+            }
+        };
+
+        // Primary attempt
+        $response = $attemptRequest($apiUrl, $apiKey);
+
+        // Fallback to perudevs if primary failed or was invalid
+        if (!$response || !$response->successful()) {
+            $fallbackUrl = 'https://api.perudevs.com/api/v1/dni/simple';
+            $fallbackKey = !empty($apiKey) ? $apiKey : 'cGVydWRldnMucHJvZHVjdGlvbi5maXRjb2RlcnMuNjlhMGJlN2YwNGEyNjc2MDk2ZjkzZDYz';
+            if ($apiUrl !== $fallbackUrl) {
+                $response = $attemptRequest($fallbackUrl, $fallbackKey);
+            }
+        }
+
+        if ($response && $response->successful()) {
+            $data = (array) $response->json();
+            $estado = (bool) ($data['estado'] ?? $data['success'] ?? $data['status'] ?? false);
+            $resultado = (array) ($data['resultado'] ?? $data['data'] ?? $data);
+
+            $name = null;
+            if (!empty($resultado['nombre_completo'])) {
+                $name = trim($resultado['nombre_completo']);
+            } elseif (!empty($resultado['nombres'])) {
+                $name = trim($resultado['nombres'] . ' ' . ($resultado['apellido_paterno'] ?? '') . ' ' . ($resultado['apellido_materno'] ?? ''));
+            }
+
+            if ($estado && !empty($name)) {
+                return response()->json([
+                    'status' => true,
+                    'name' => $name
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'No se encontraron datos'
+        ]);
     }
 
     public function apiProvinces(Request $request){

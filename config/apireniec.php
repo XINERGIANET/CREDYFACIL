@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'url' => env('APIRENIEC_URL', 'https://api.json.pe/api/dni'),
-    'ruc_url' => env('APIRENIEC_URL_RUC', 'https://api.json.pe/api/ruc'),
-    'key' => env('APIRENIEC_KEY', ''),
+    'url' => env('APIRENIEC_URL', 'https://api.perudevs.com/api/v1/dni/simple'),
+    'ruc_url' => env('APIRENIEC_URL_RUC', 'https://api.perudevs.com/api/v1/ruc'),
+    'key' => env('APIRENIEC_KEY', 'cGVydWRldnMucHJvZHVjdGlvbi5maXRjb2RlcnMuNjlhMGJlN2YwNGEyNjc2MDk2ZjkzZDYz'),
 ];
